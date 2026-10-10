@@ -61,21 +61,33 @@ class Pause extends Screen {
         switch (e.code) {
             case this.game.bindings['quit']:
                 this.game.on_pause(current_time);
+                socket.emit('action', { type: 'pause', time: current_time });
                 this.exit_state();
                 break;
             case this.game.bindings['reset']:
-                this.game.on_reset(current_time);
-                this.exit_state();
-                new Ready(this.engine, this.game).enter_state(current_time);
+                if (typeof io !== 'undefined' && socket.connected) {
+                    socket.emit('action', { type: 'reset', time: current_time }, (response) => {
+                        this.game.on_reset(response.time, { seed: response.seed });
+                        this.exit_state();
+                        new Ready(this.engine, this.game).enter_state(response.time);
+                    });
+                } else {
+                    this.game.on_reset(current_time);
+                    this.exit_state();
+                    new Ready(this.engine, this.game).enter_state(current_time);
+                }
                 break;
             case this.game.bindings['move_left']:
                 this.game.on_move_left_press(current_time);
+                socket.emit('action', { type: 'move_left_press', time: current_time });
                 break;
             case this.game.bindings['move_right']:
                 this.game.on_move_right_press(current_time);
+                socket.emit('action', { type: 'move_right_press', time: current_time });
                 break;
             case this.game.bindings['soft_drop']:
                 this.game.on_soft_drop_press(current_time);
+                socket.emit('action', { type: 'soft_drop_press', time: current_time });
                 break;
         }
     }
@@ -84,12 +96,15 @@ class Pause extends Screen {
         switch (e.code) {
             case this.game.bindings['move_left']:
                 this.game.on_move_left_unpress(current_time);
+                socket.emit('action', { type: 'move_left_unpress', time: current_time });
                 break;
             case this.game.bindings['move_right']:
                 this.game.on_move_right_unpress(current_time);
+                socket.emit('action', { type: 'move_right_unpress', time: current_time });
                 break;
             case this.game.bindings['soft_drop']:
                 this.game.on_soft_drop_unpress(current_time);
+                socket.emit('action', { type: 'soft_drop_unpress', time: current_time });
                 break;
         }
     }

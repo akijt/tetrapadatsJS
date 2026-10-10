@@ -17,6 +17,10 @@
     </head>
     <body>
         <canvas id='myCanvas'></canvas>
+        <script>
+            if (window.location.protocol.startsWith('http'))
+                document.write('<script src="/socket.io/socket.io.js"><\/script>');
+        </script>
         <script src='engine.js'></script>
         <script src='tetra.js'></script>
         <script src='menu.js'></script>

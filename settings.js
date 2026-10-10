@@ -157,10 +157,13 @@ class Settings extends Screen {
         }
         switch (e.code) {
             case this.game.bindings['quit']:
-                if (Object.values(this.game.bindings).includes('##########'))
+                if (Object.values(this.game.bindings).includes('##########')) {
                     this.flash_time = current_time + 3000;
-                else
+                } else {
+                    // socket.emit('config', { type: 'bindings', value: this.game.bindings });
+                    // socket.emit('config', { type: 'handling', value: this.game.handling });
                     this.exit_state();
+                }
                 break;
         }
     }
@@ -170,10 +173,13 @@ class Settings extends Screen {
             this.game.set_bindings({[this.selection]: this.last_binding});
             this.last_binding = null;
         } else if (this.selection === 'back') {
-            if (Object.values(this.game.bindings).includes('##########'))
+            if (Object.values(this.game.bindings).includes('##########')) {
                 this.flash_time = current_time + 3000;
-            else
+            } else {
+                // socket.emit('config', { type: 'bindings', value: this.game.bindings });
+                // socket.emit('config', { type: 'handling', value: this.game.handling });
                 this.exit_state();
+            }
         } else if (this.selection === 'developer') {
             document.body.style.cursor = 'default';
             this.game.set_bindings({'quit'      : 'KeyQ',

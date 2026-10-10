@@ -43,11 +43,20 @@ class Finish extends Screen {
         switch (e.code) {
             case this.game.bindings['quit']:
                 this.exit_state(2);
+                socket.emit('room', { type: 'leave' });
                 break;
             case this.game.bindings['reset']:
-                this.game.reset(current_time);
-                this.exit_state();
-                new Ready(this.engine, this.game).enter_state(current_time);
+                if (typeof io !== 'undefined' && socket.connected) {
+                    socket.emit('action', { type: 'reset', time: current_time }, (response) => {
+                        this.game.on_reset(response.time, { seed: response.seed });
+                        this.exit_state();
+                        new Ready(this.engine, this.game).enter_state(response.time);
+                    });
+                } else {
+                    this.game.on_reset(current_time);
+                    this.exit_state();
+                    new Ready(this.engine, this.game).enter_state(current_time);
+                }
                 break;
         }
     }

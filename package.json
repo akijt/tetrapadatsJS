@@ -1,0 +1,25 @@
+{
+  "name": "tetrapadats",
+  "version": "1.0.20261002",
+  "description": "A block-stacking game in JS",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akijt/tetrapadatsJS.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/akijt/tetrapadatsJS/issues"
+  },
+  "homepage": "https://github.com/akijt/tetrapadatsJS#readme",
+  "dependencies": {
+    "express": "^4.22.3",
+    "socket.io": "^4.8.4"
+  }
+}

@@ -46,6 +46,30 @@ class Play extends Screen {
             }
         }
 
+        // PRINT SERVER BOARD
+        if (this.game.server_game) {
+            const mini_tile = tile_size / 2;
+            this.engine.ctx.beginPath();
+            this.engine.ctx.strokeStyle = 'rgb(255, 255, 255)';
+            this.engine.ctx.lineWidth = Math.ceil(mini_tile / 16);
+            for (let r = 0; r < 20; r++) {
+                for (let c = 0; c < 10; c++) {
+                    if (this.game.server_game.board[r][c] == null) {
+                        this.engine.ctx.rect(mid_x + (24 + c) * mini_tile, mid_y + (3 - r) * mini_tile, mini_tile, mini_tile);
+                    }
+                }
+            }
+            this.engine.ctx.stroke();
+            for (let r = 0; r < 40; r++) {
+                for (let c = 0; c < 10; c++) {
+                    if (this.game.server_game.board[r][c] != null && (r < 20 || this.game.server_game.board[r][c] != 'x')) {
+                        this.engine.ctx.fillStyle = this.game.colors[this.game.server_game.board[r][c]];
+                        this.engine.ctx.fillRect(mid_x + (24 + c) * mini_tile, mid_y + (3 - r) * mini_tile, mini_tile, mini_tile);
+                    }
+                }
+            }
+        }
+
         // PRINT TARGET PIECE
         this.engine.ctx.fillStyle = this.game.colors['x'];
         if (this.game.customizations.target) {
@@ -142,35 +166,51 @@ class Play extends Screen {
         switch (e.code) {
             case this.game.bindings['quit']:
                 this.game.on_pause(current_time);
+                socket.emit('action', { type: 'pause', time: current_time });
                 new Pause(this.engine, this.game).enter_state(current_time);
                 break;
             case this.game.bindings['reset']:
-                this.game.on_reset(current_time);
-                new Ready(this.engine, this.game).enter_state(current_time);
+                if (typeof io !== 'undefined' && socket.connected) {
+                    socket.emit('action', { type: 'reset', time: current_time }, (response) => {
+                        this.game.on_reset(response.time, { seed: response.seed });
+                        new Ready(this.engine, this.game).enter_state(response.time);
+                    });
+                } else {
+                    this.game.on_reset(current_time);
+                    new Ready(this.engine, this.game).enter_state(current_time);
+                }
                 break;
             case this.game.bindings['hold']:
                 this.game.on_hold(current_time);
+                socket.emit('action', { type: 'hold', time: current_time });
                 break;
             case this.game.bindings['move_left']:
                 this.game.on_move_left_press(current_time);
+                socket.emit('action', { type: 'move_left_press', time: current_time });
                 break;
             case this.game.bindings['move_right']:
                 this.game.on_move_right_press(current_time);
+                socket.emit('action', { type: 'move_right_press', time: current_time });
                 break;
             case this.game.bindings['rotate_cw']:
                 this.game.on_rotate_cw(current_time);
+                socket.emit('action', { type: 'rotate_cw', time: current_time });
                 break;
             case this.game.bindings['rotate_180']:
                 this.game.on_rotate_180(current_time);
+                socket.emit('action', { type: 'rotate_180', time: current_time });
                 break;
             case this.game.bindings['rotate_ccw']:
                 this.game.on_rotate_ccw(current_time);
+                socket.emit('action', { type: 'rotate_ccw', time: current_time });
                 break;
             case this.game.bindings['soft_drop']:
                 this.game.on_soft_drop_press(current_time);
+                socket.emit('action', { type: 'soft_drop_press', time: current_time });
                 break;
             case this.game.bindings['hard_drop']:
                 this.game.on_hard_drop(current_time);
+                socket.emit('action', { type: 'hard_drop', time: current_time });
                 break;
         }
     }
@@ -179,12 +219,15 @@ class Play extends Screen {
         switch (e.code) {
             case this.game.bindings['move_left']:
                 this.game.on_move_left_unpress(current_time);
+                socket.emit('action', { type: 'move_left_unpress', time: current_time });
                 break;
             case this.game.bindings['move_right']:
                 this.game.on_move_right_unpress(current_time);
+                socket.emit('action', { type: 'move_right_unpress', time: current_time });
                 break;
             case this.game.bindings['soft_drop']:
                 this.game.on_soft_drop_unpress(current_time);
+                socket.emit('action', { type: 'soft_drop_unpress', time: current_time });
                 break;
         }
     }
