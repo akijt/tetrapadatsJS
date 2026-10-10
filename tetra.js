@@ -67,13 +67,55 @@ class Tetra { // TODO: review 180 kicks
                             [3, 4, 3, 2, 3, 4, 4, 3],
                             [2, 3, 2, 1, 2, 3, 3, 2, 2]]};
     static ORIENTATIONS = {'o': 1, 'i': 2, 's': 2, 'z': 2, 'j': 4, 'l': 4, 't': 4};
-    static STAT_NAMES = ['mode', 'time', 'score', 'pieces', 'lines', 'level',
-                         'DAS', 'ARR', 'SDF', 'keys', 'holds', 'finesse',
+    static STAT_NAMES = ['mode', 'seed', 'DAS', 'ARR', 'SDF', 'time', 'score',
+                         'pieces', 'lines', 'level', 'keys', 'holds', 'finesse',
                          'single', 'double', 'triple', 'quad',
                          'mini t-spin null', 'mini t-spin single', 'mini t-spin double',
                          't-spin null', 't-spin single', 't-spin double', 't-spin triple',
                          'perfect clear single', 'perfect clear double', 'perfect clear triple',
                          'perfect clear quad', 'max b2b', 'max combo'];
+    static CUSTOMIZATIONS = {
+        // Lock Delay Types (this.customizations.lock_type):
+        // 0: Classic Lock (Strict timer)
+        // 1: Extended Lock (Timer resets on action with action cap)
+        // 2: Infinite Lock (Timer resets on action with no action cap)
+        'default': {
+            kick: true,
+            r180: true,
+            queue_type: 0,
+            allow_hold: true,
+            allow_hd: true,
+            sd_type: 0,
+            lock_type: 1,
+            ghost: true,
+            next: 3,
+            target: false,
+            cheese: 0,
+            four_wide: false
+        },
+        'classic': {
+            kick: false,
+            r180: false,
+            queue_type: 1,
+            allow_hold: false,
+            allow_hd: false,
+            sd_type: 1,
+            lock_type: 0,
+            ghost: false,
+            next: 1
+        },
+        'finesse': {
+            allow_hold: false,
+            next: 0,
+            target: true
+        },
+        'cheese': {
+            cheese: 5
+        },
+        '4-wide': {
+            four_wide: true
+        }
+    }
     static CLEAR_STRINGS     = {0: 'null', 1: 'single', 2: 'double', 3: 'triple', 4: 'quad'};
     static PC_SCORES         = {1: 800, 2: 1200, 3: 1800, 4: 2000};
     static TSPIN_SCORES      = {0: 400, 1: 800,  2: 1200, 3: 1600};
@@ -104,104 +146,104 @@ class Tetra { // TODO: review 180 kicks
                          'soft_drop' : 'ArrowDown',
                          'hard_drop' : 'ArrowUp'};
         this.handling = {'DAS': 150, 'ARR': 30, 'SDF': 20};
+
+        this.seed = undefined;
+        this.paused = true;
+        this.finish = 0;
     }
 
-    on_move_left_press(time)    {this.move_press(-1, time);}
-    on_move_left_unpress(time)  {this.move_unpress(-1, time);}
-    on_move_right_press(time)   {this.move_press(1, time);}
-    on_move_right_unpress(time) {this.move_unpress(1, time);}
-    on_soft_drop_press(time)    {this.soft_drop(time);}
-    on_soft_drop_unpress(time)  {this.unsoft_drop();}
-    on_rotate_cw(time)          {this.rotate(1, time);}
-    on_rotate_180(time)         {this.rotate(2, time);}
-    on_rotate_ccw(time)         {this.rotate(3, time);}
-    on_hard_drop(time)          {this.hard_drop(time);}
-    on_hold(time)               {this.hold(time);}
-    on_pause(time)              {this.pause(time);}
-    on_reset(time)              {this.reset(time);}
+    on_reset(time, { seed } = {}) {return this.reset(time, seed);}
+    on_start(time)                {this.start(time);}
+    on_pause(time)                {this.pause(time);}
+    on_move_left_press(time)      {this.move_press(-1, time);}
+    on_move_left_unpress(time)    {this.move_unpress(-1, time);}
+    on_move_right_press(time)     {this.move_press(1, time);}
+    on_move_right_unpress(time)   {this.move_unpress(1, time);}
+    on_soft_drop_press(time)      {this.soft_drop(time);}
+    on_soft_drop_unpress(time)    {this.unsoft_drop();}
+    on_rotate_cw(time)            {this.rotate(1, time);}
+    on_rotate_180(time)           {this.rotate(2, time);}
+    on_rotate_ccw(time)           {this.rotate(3, time);}
+    on_hard_drop(time)            {this.hard_drop(time);}
+    on_hold(time)                 {this.hold(time);}
+
+    set_mode(mode)         {this.mode = mode;}
+    set_level(level)       {this.level = level;}
+    set_bindings(bindings) {Object.assign(this.bindings, bindings);}
+    set_handling(handling) {Object.assign(this.handling, handling);}
+
+    get_macro_state() {
+        return {
+            position: this.position,
+            rotation: this.rotation,
+            board: this.board,
+            piece: this.piece,
+            held: this.held,
+            hold_used: this.hold_used,
+            queue: this.queue,
+            score: this.stats.score,
+            finish: this.finish
+        };
+    }
+    get_micro_state() {
+        return {
+            position: this.position,
+            rotation: this.rotation
+        };
+    }
+
+    mulberry32() {
+        if (this.seed === undefined) return Math.random(); // Math.random if unseeded
+        let t = (this.seed += 0x6D2B79F5);
+        // let t = (this.seed = (this.seed + 0x6D2B79F5) | 0);
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
 
     shuffle(a, duplicates) {
-        if (duplicates) return Array.from({ length: a.length }, () => a[Math.floor(Math.random() * a.length)]);
+        if (duplicates) return Array.from({ length: a.length }, () => a[Math.floor(this.mulberry32() * a.length)]);
         const arr = [...a];
         for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = Math.floor(this.mulberry32() * (i + 1));
             [arr[i], arr[j]] = [arr[j], arr[i]];
         }
         return arr;
     }
 
-    set_mode(mode) {
-        this.mode = mode;
-    }
-
-    set_level(level) {
-        this.level = level;
-    }
-
-    set_bindings(bindings) {
-        Object.assign(this.bindings, bindings);
-    }
-
-    set_handling(handling) {
-        Object.assign(this.handling, handling);
-    }
-
     reset_mode() {
-        // Lock Delay Types (this.customizations.lock_type):
-        // 0: Classic Lock (Strict timer)
-        // 1: Extended Lock (Timer resets on action with action cap)
-        // 2: Infinite Lock (Timer resets on action with no action cap)
-        switch (this.mode) {
-            case 'classic':
-                this.customizations.kick = false;
-                this.customizations.r180 = false;
-                this.customizations.queue_type = 1;
-                this.customizations.allow_hold = false;
-                this.customizations.allow_hd = false;
-                this.customizations.sd_type = 1;
-                this.customizations.lock_type = 0;
-                this.customizations.ghost = false;
-                this.customizations.next = 1;
-                this.stats.DAS = 300;
-                this.stats.ARR = 100;
-                this.stats.SDF = 33;
-                break;
-            case 'finesse':
-                this.customizations.allow_hold = false;
-                // this.customizations.ghost = false;
-                this.customizations.next = 0;
-                this.customizations.target = true;
-                break;
-            case 'cheese':
-                this.customizations.cheese = 5;
-                this.add_cheese(this.customizations.cheese);
-                break;
-            case '4-wide':
-                this.customizations.four_wide = true;
-                for (let r = 0; r < 40; r++) this.board[r] = ['x', 'x', 'x', null, null, null, null, 'x', 'x', 'x'];
-                this.board[0][3] = 'x';
-                this.board[1][3] = 'x';
-                this.board[1][4] = 'x';
-                break;
+        if (Tetra.CUSTOMIZATIONS[this.mode]) Object.assign(this.customizations, Tetra.CUSTOMIZATIONS[this.mode]);
+
+        if (this.mode === 'classic') {
+            this.stats.DAS = 300;
+            this.stats.ARR = 100;
+            this.stats.SDF = 33;
+        }
+        if (!this.customizations.kick) ['t', 'i'].forEach(x => [0, 1, 2, 3].forEach(y => [0, 1, 2, 3].forEach(z => this.kicks[x][y][z] = [[0, 0]])));
+        if (!this.customizations.r180) ['t', 'i'].forEach(x => [0, 1, 2, 3].forEach(y => this.kicks[x][y][(y + 2) % 4] = []));
+        if (this.customizations.cheese > 0) this.add_cheese(this.customizations.cheese);
+        if (this.customizations.four_wide) {
+            for (let r = 0; r < 40; r++) this.board[r] = ['x', 'x', 'x', null, null, null, null, 'x', 'x', 'x'];
+            this.board[0][3] = 'x';
+            this.board[1][3] = 'x';
+            this.board[1][4] = 'x';
         }
     }
 
-    reset(current_time) {
+    reset(current_time, seed = Math.floor(Math.random() * 1000000)) {
+        this.seed = seed;
         this.paused = true;
         this.board = [...new Array(40)].map(() => new Array(10).fill(null));
+        this.kicks = structuredClone(Tetra.DEFAULT_KICKS);
 
-        this.stats = {};
-        Tetra.STAT_NAMES.forEach(x => this.stats[x] = 0);
+        this.stats = Object.fromEntries(Tetra.STAT_NAMES.map(name => [name, 0]));
         Object.keys(this.handling).forEach(x => this.stats[x] = this.handling[x]);
         this.stats.mode = this.mode;
         this.stats.level = this.level;
+        this.stats.seed = this.seed;
 
-        this.customizations = {'kick': true, 'r180': true, 'queue_type': 0, 'allow_hold': true, 'allow_hd': true, 'sd_type': 0, 'lock_type': 1, 'ghost': true, 'next': 3, 'target': false, 'cheese': 0, 'four_wide': false};
+        this.customizations = { ...Tetra.CUSTOMIZATIONS.default };
         this.reset_mode();
-        this.kicks = structuredClone(Tetra.DEFAULT_KICKS);
-        if (!this.customizations.kick) ['t', 'i'].forEach(x => [0, 1, 2, 3].forEach(y => [0, 1, 2, 3].forEach(z => this.kicks[x][y][z] = [[0, 0]])));
-        if (!this.customizations.r180) ['t', 'i'].forEach(x => [0, 1, 2, 3].forEach(y => this.kicks[x][y][(y + 2) % 4] = []));
-        
 
         this.queue = this.shuffle(Object.keys(Tetra.MINOS), this.customizations.queue_type);
         this.held = null;
@@ -222,6 +264,8 @@ class Tetra { // TODO: review 180 kicks
         else if (key_hold_old[2] === 1) this.move_press(1, current_time);
         if (key_hold_old[0] === 2) this.move_press(-1, current_time);
         else if (key_hold_old[2] === 2) this.move_press(1, current_time);
+
+        return { seed };
     }
 
     start(current_time) {
@@ -258,8 +302,8 @@ class Tetra { // TODO: review 180 kicks
 
     set_target() {
         this.target = {};
-        this.target.rotation = Math.floor(Math.random() * 4);
-        this.target.location = Math.floor(Math.random() * Tetra.FINESSE[this.piece][this.target.rotation].length);
+        this.target.rotation = Math.floor(this.mulberry32() * 4);
+        this.target.location = Math.floor(this.mulberry32() * Tetra.FINESSE[this.piece][this.target.rotation].length);
         const minos_piece_rotation = Tetra.MINOS[this.piece][this.target.rotation];
         this.target.position = [
             this.target.location - Math.min(...minos_piece_rotation.map(x => x[0])),
@@ -500,11 +544,11 @@ class Tetra { // TODO: review 180 kicks
                 return;
             }
         }
-        const aligned_gap = Math.floor(Math.random() * 10);
+        const aligned_gap = Math.floor(this.mulberry32() * 10);
         const new_cheese = [];
         for (let i = 0; i < n; i++) {
             const row = new Array(10).fill('x');
-            const gap = aligned ? aligned_gap : Math.floor(Math.random() * 10);
+            const gap = aligned ? aligned_gap : Math.floor(this.mulberry32() * 10);
             row[gap] = null;
             new_cheese.push(row);
         }
@@ -638,6 +682,10 @@ class Tetra { // TODO: review 180 kicks
         }
     }
 
+    should_update() {
+        return (!this.paused && this.finish === 0);
+    }
+
     frame_update(current_time) {
         this.move_hold(current_time);
         this.gravity_drop(current_time);
@@ -670,4 +718,8 @@ class Tetra { // TODO: review 180 kicks
             this.paused = true;
         }
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Tetra;
 }
