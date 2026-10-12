@@ -3,14 +3,14 @@ class Finish extends Screen {
         super(engine);
         this.game = game;
         this.result = '';
-        if (this.game.finish == 1) {
-            if (this.game.stats.mode == 'sprint') {
+        if (this.game.finished === 1) {
+            if (this.game.stats.mode === 'sprint') {
                 this.result = ((this.game.stats.time) / 1000).toFixed(3);
-            } else if (this.game.stats.mode == 'finesse') {
+            } else if (this.game.stats.mode === 'finesse') {
                 this.result = `${this.game.stats.pieces} pieces`
-            } else if (this.game.stats.mode == 'cheese') {
+            } else if (this.game.stats.mode === 'cheese') {
                 this.result = ((this.game.stats.time) / 1000).toFixed(3);
-            } else if (this.game.stats.mode == '4-wide') {
+            } else if (this.game.stats.mode === '4-wide') {
                 this.result = `${this.game.stats.lines} lines`;
             } else {
                 this.result = `${this.game.stats.score} pts`;
@@ -45,7 +45,7 @@ class Finish extends Screen {
                 this.exit_state(2);
                 break;
             case this.game.bindings['reset']:
-                this.game.reset(current_time);
+                this.game.action_handler('reset', current_time);
                 this.exit_state();
                 new Ready(this.engine, this.game).enter_state(current_time);
                 break;

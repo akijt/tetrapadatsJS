@@ -63,7 +63,7 @@ class Menu extends Screen {
                 document.body.style.cursor = 'default';
                 this.game.set_mode('marathon');
                 this.game.set_level(1);
-                this.game.reset(current_time);
+                this.game.action_handler('reset', current_time);
                 new Play(this.engine, this.game).enter_state(current_time);
                 new Ready(this.engine, this.game).enter_state(current_time);
                 break;
@@ -78,7 +78,7 @@ class Menu extends Screen {
             document.body.style.cursor = 'default';
             this.game.set_mode(this.selection);
             this.game.set_level(1);
-            this.game.reset(current_time);
+            this.game.action_handler('reset', current_time);
             new Play(this.engine, this.game).enter_state(current_time);
             new Ready(this.engine, this.game).enter_state(current_time);
         }

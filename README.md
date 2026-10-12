@@ -97,6 +97,7 @@ No build tools or package managers required.
 ## Roadmap & To-Do
 
 - [x] **In-Game Customization UI:** Add menu screen for keybinding remapping and live adjustment of handling settings (DAS, ARR, SDF).
+- [x] **Make the Game Deterministic:** Implement DES architecture to ensure the game acts deterministically, enabling game replays.
 - [ ] **Engine Text Input System:** Finish the built-in `text_buffer` listener to support text input fields for player profiles and high score entries.
 - [ ] **Cheese Mode Win Condition:** Implement a target cleared-garbage counter so Cheese mode functions as a winnable time attack.
 - [ ] **Finesse Mode Win Condition:** Implement a timer so Finesse mode functions as a sprint competing for most pieces.

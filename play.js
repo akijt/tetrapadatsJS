@@ -5,8 +5,8 @@ class Play extends Screen {
     }
 
     update(current_time) {
-        this.game.frame_update(current_time);
-        if (this.game.finish) {
+        if (this.game.frame_update(current_time)) {
+            this.game.action_handler('pause', current_time);
             new Finish(this.engine, this.game).enter_state(current_time);
         }
     }
@@ -116,7 +116,11 @@ class Play extends Screen {
         this.engine.ctx.textAlign = 'left';
         // this.engine.ctx.fillText(this.engine.debug, mid_x + (6) * tile_size, mid_y + (3) * tile_size);
         this.engine.ctx.fillText(this.game.stats.score, mid_x + (6) * tile_size, mid_y + (6) * tile_size);
-        this.engine.ctx.fillText(((current_time - this.game.stats.time) / 1000).toFixed(3), mid_x + (6) * tile_size, mid_y + (9) * tile_size);
+        const t = current_time - this.game.stats.time;
+        const m = Math.floor(t / 60000);
+        const s = Math.floor(t / 1000) % 60;
+        const ms = t % 1000;
+        this.engine.ctx.fillText(`${m}:${s < 10 ? '0' : ''}${s}.${ms < 100 ? (ms < 10 ? '00' : '0') : ''}${ms}`, mid_x + 6 * tile_size, mid_y + 9 * tile_size);
 
         this.engine.ctx.textAlign = 'right';
         this.engine.ctx.fillText(this.game.stats.pieces, mid_x + (-6) * tile_size, mid_y + (3) * tile_size);
@@ -141,36 +145,36 @@ class Play extends Screen {
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.game.on_pause(current_time);
+                this.game.action_handler('pause', current_time);
                 new Pause(this.engine, this.game).enter_state(current_time);
                 break;
             case this.game.bindings['reset']:
-                this.game.on_reset(current_time);
+                this.game.action_handler('reset', current_time);
                 new Ready(this.engine, this.game).enter_state(current_time);
                 break;
             case this.game.bindings['hold']:
-                this.game.on_hold(current_time);
-                break;
-            case this.game.bindings['move_left']:
-                this.game.on_move_left_press(current_time);
-                break;
-            case this.game.bindings['move_right']:
-                this.game.on_move_right_press(current_time);
+                this.game.action_handler('hold', current_time);
                 break;
             case this.game.bindings['rotate_cw']:
-                this.game.on_rotate_cw(current_time);
+                this.game.action_handler('rotate_cw', current_time);
                 break;
             case this.game.bindings['rotate_180']:
-                this.game.on_rotate_180(current_time);
+                this.game.action_handler('rotate_180', current_time);
                 break;
             case this.game.bindings['rotate_ccw']:
-                this.game.on_rotate_ccw(current_time);
+                this.game.action_handler('rotate_ccw', current_time);
+                break;
+            case this.game.bindings['move_left']:
+                this.game.action_handler('move_left_press', current_time);
+                break;
+            case this.game.bindings['move_right']:
+                this.game.action_handler('move_right_press', current_time);
                 break;
             case this.game.bindings['soft_drop']:
-                this.game.on_soft_drop_press(current_time);
+                this.game.action_handler('soft_drop_press', current_time);
                 break;
             case this.game.bindings['hard_drop']:
-                this.game.on_hard_drop(current_time);
+                this.game.action_handler('hard_drop', current_time);
                 break;
         }
     }
@@ -178,13 +182,13 @@ class Play extends Screen {
     keyUpHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['move_left']:
-                this.game.on_move_left_unpress(current_time);
+                this.game.action_handler('move_left_release', current_time);
                 break;
             case this.game.bindings['move_right']:
-                this.game.on_move_right_unpress(current_time);
+                this.game.action_handler('move_right_release', current_time);
                 break;
             case this.game.bindings['soft_drop']:
-                this.game.on_soft_drop_unpress(current_time);
+                this.game.action_handler('soft_drop_release', current_time);
                 break;
         }
     }

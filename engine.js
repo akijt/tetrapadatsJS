@@ -35,7 +35,7 @@ class Screen {
 }
 
 class Engine {
-    constructor(target_fps = 60) {
+    constructor() {
         this.canvas = document.getElementById('myCanvas');
         this.ctx = this.canvas.getContext('2d');
 
@@ -65,10 +65,6 @@ class Engine {
         this.input_state = {};
         input_codes.forEach(code => {this.input_state[code] = 0;});
 
-        this.target_fps = target_fps;
-        this.frame_interval = 1000 / this.target_fps;
-        this.last_update_time = 0;
-
         // TODO: implement text input capabilities using e.key
         this.text_input_active = false;
         this.text_buffer = '';
@@ -79,7 +75,8 @@ class Engine {
     }
 
     run(screen) { // TODO: possibly change document to this.canvas for different mouse location data
-        screen.enter_state();
+        const current_time = Math.floor(performance.now());
+        screen.enter_state(current_time);
         window.addEventListener('resize', this.resizeHandler.bind(this));
         document.addEventListener('keydown', this.keyDownHandler.bind(this));
         document.addEventListener('keyup', this.keyUpHandler.bind(this));
@@ -91,22 +88,13 @@ class Engine {
         document.addEventListener('mousemove', this.moveHandler.bind(this));
 
         this.resizeHandler();
-        this.last_update_time = performance.now();
         requestAnimationFrame(this.game_loop.bind(this));
     }
 
     game_loop() {
         requestAnimationFrame(this.game_loop.bind(this));
-        const current_time = performance.now();
-        if (current_time >= this.last_update_time + 10000) {
-            this.last_update_time = current_time;
-            this.state_stack[this.state_stack.length - 1]?.update(this.last_update_time);
-        } else {
-            while (current_time >= this.last_update_time + this.frame_interval) {
-                this.last_update_time += this.frame_interval;
-                this.state_stack[this.state_stack.length - 1]?.update(this.last_update_time);
-            }
-        }
+        const current_time = Math.floor(performance.now());
+        this.state_stack[this.state_stack.length - 1]?.update(current_time);
         this.state_stack[this.state_stack.length - 1]?.render(current_time);
     }
 
@@ -124,7 +112,7 @@ class Engine {
         if (e.repeat) return;
         const code = e.code;
         if (this.input_state[code] === 0) {
-            const current_time = performance.now();
+            const current_time = Math.floor(performance.now());
             this.input_state[code] = current_time;
             this.state_stack[this.state_stack.length - 1]?.keyDownHandler(e, current_time);
         }
@@ -133,7 +121,7 @@ class Engine {
     keyUpHandler(e) {
         const code = e.code;
         if (this.input_state[code] > 0) {
-            const current_time = performance.now();
+            const current_time = Math.floor(performance.now());
             this.input_state[code] = 0;
             this.state_stack[this.state_stack.length - 1]?.keyUpHandler(e, current_time);
         }
@@ -142,7 +130,7 @@ class Engine {
     mouseDownHandler(e) {
         const code = 'Mouse' + e.button;
         if (this.input_state[code] === 0) {
-            const current_time = performance.now();
+            const current_time = Math.floor(performance.now());
             this.input_state[code] = current_time;
             this.state_stack[this.state_stack.length - 1]?.mouseDownHandler(e, current_time);
         }
@@ -151,31 +139,31 @@ class Engine {
     mouseUpHandler(e) {
         const code = 'Mouse' + e.button;
         if (this.input_state[code] > 0) {
-            const current_time = performance.now();
+            const current_time = Math.floor(performance.now());
             this.input_state[code] = 0;
             this.state_stack[this.state_stack.length - 1]?.mouseUpHandler(e, current_time);
         }
     }
 
     clickHandler(e) {
-        const current_time = performance.now();
+        const current_time = Math.floor(performance.now());
         this.state_stack[this.state_stack.length - 1]?.clickHandler(e, current_time);
     }
 
     auxClickHandler(e) {
         e.preventDefault();
-        const current_time = performance.now();
+        const current_time = Math.floor(performance.now());
         this.state_stack[this.state_stack.length - 1]?.auxClickHandler(e, current_time);
     }
 
     contextMenuHandler(e) {
         e.preventDefault();
-        const current_time = performance.now();
+        const current_time = Math.floor(performance.now());
         this.state_stack[this.state_stack.length - 1]?.contextMenuHandler(e, current_time);
     }
 
     moveHandler(e) {
-        const current_time = performance.now();
+        const current_time = Math.floor(performance.now());
         this.state_stack[this.state_stack.length - 1]?.moveHandler(e, current_time);
     }
 }
