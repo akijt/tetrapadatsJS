@@ -24,6 +24,7 @@ class Screen {
         console.error('render not implemented')
     }
 
+    textInputHandler(e, current_time) {}
     keyDownHandler(e, current_time) {}
     keyUpHandler(e, current_time) {}
     mouseDownHandler(e, current_time) {}
@@ -65,10 +66,9 @@ class Engine {
         this.input_state = {};
         input_codes.forEach(code => {this.input_state[code] = 0;});
 
-        // TODO: implement text input capabilities using e.key
         this.text_input_active = false;
         this.text_buffer = '';
-        this.max_text_length = 15;
+        this.text_max_length = 16;
 
         this.state_stack = [];
         // this.debug = '';
@@ -98,6 +98,19 @@ class Engine {
         this.state_stack[this.state_stack.length - 1]?.render(current_time);
     }
 
+    start_text_input(intial_text = '', max_length = 16) {
+        this.text_input_active = true;
+        this.text_buffer = intial_text;
+        this.text_max_length = max_length;
+    }
+
+    stop_text_input() {
+        this.text_input_active = false;
+        const text = this.text_buffer;
+        this.text_buffer = '';
+        return text;
+    }
+
     resizeHandler(e) {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
@@ -109,12 +122,24 @@ class Engine {
     }
 
     keyDownHandler(e) {
-        if (e.repeat) return;
-        const code = e.code;
-        if (this.input_state[code] === 0) {
-            const current_time = Math.floor(performance.now());
-            this.input_state[code] = current_time;
-            this.state_stack[this.state_stack.length - 1]?.keyDownHandler(e, current_time);
+        if (this.text_input_active) {
+            const key = e.key;
+            if (key === 'Enter' || key === 'Escape' || key === 'Tab') {
+                const current_time = Math.floor(performance.now());
+                const text = this.stop_text_input();
+                this.state_stack[this.state_stack.length - 1]?.textInputHandler(e, current_time, {text: text, key: key});
+            } else if (key === 'Backspace') {
+                this.text_buffer = this.text_buffer.slice(0, -1);
+            } else if (e.key.length === 1 && this.text_buffer.length < this.text_max_length) {
+                this.text_buffer += e.key;
+            }
+        } else if (!e.repeat) {
+            const code = e.code;
+            if (this.input_state[code] === 0) {
+                const current_time = Math.floor(performance.now());
+                this.input_state[code] = current_time;
+                this.state_stack[this.state_stack.length - 1]?.keyDownHandler(e, current_time);
+            }
         }
     }
 
