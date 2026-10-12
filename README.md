@@ -97,10 +97,12 @@ No build tools or package managers required.
 ## Roadmap & To-Do
 
 - [x] **In-Game Customization UI:** Add menu screen for keybinding remapping and live adjustment of handling settings (DAS, ARR, SDF).
-- [x] **Make the Game Deterministic:** Implement DES architecture to ensure the game acts deterministically, enabling game replays.
+- [x] **Discrete Event Simulation:** Implement DES architecture to ensure the game acts deterministically, enabling game replays.
 - [ ] **Engine Text Input System:** Finish the built-in `text_buffer` listener to support text input fields for player profiles and high score entries.
 - [ ] **Cheese Mode Win Condition:** Implement a target cleared-garbage counter so Cheese mode functions as a winnable time attack.
 - [ ] **Finesse Mode Win Condition:** Implement a timer so Finesse mode functions as a sprint competing for most pieces.
-- [ ] **Classic Mode Gravity:** Validate Classic mode gravity to better reflect traditional speeds.
-- [ ] **Fix Pixel Snapping:** Scale canvas resolution by DPR and adjust stroke offsets to eliminate anti-aliasing blur on all displays
-- [ ] **Inputs on Mobile**
+- [x] **Classic Mode Gravity:** Validate Classic mode gravity to better reflect traditional speeds.
+- [ ] **Pixel Snapping:** Scale canvas resolution by DPR and adjust stroke offsets to eliminate anti-aliasing blur on all displays
+- [ ] **Inputs on Mobile:** Make gameplay possible when accessed from a touchscreen device.
+- [ ] **Server Autoritative Model:** Host and communicate with a server that validates gameplay.
+- [ ] **Database:** Enable record keeping with a database, storing game config and scores.
