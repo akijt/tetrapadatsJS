@@ -229,11 +229,18 @@ class Tetra { // TODO: review 180 kicks
         }
     }
 
-    reset(current_time, seed = Math.floor(Math.random() * 1000000)) {
-        this.seed = seed;
+    reset(current_time, seed) {
+        this.seed = seed ?? Math.floor(Math.random() * 1000000);
         this.paused = true;
+        this.finished = 0;
         this.board = [...new Array(40)].map(() => new Array(10).fill(null));
-        this.kicks = structuredClone(Tetra.DEFAULT_KICKS);
+        this.held = null;
+        this.hold_used = false;
+
+        this.b2b = -1;
+        this.combo = -1;
+        this.last_clear = '';
+        this.finesse_keys = 0;
 
         this.stats = Object.fromEntries(Tetra.STAT_NAMES.map(name => [name, 0]));
         Object.keys(this.handling).forEach(x => this.stats[x] = this.handling[x]);
@@ -242,25 +249,17 @@ class Tetra { // TODO: review 180 kicks
         this.stats.seed = this.seed;
 
         this.customizations = { ...Tetra.CUSTOMIZATIONS.default };
-        this.finish_time = 0;
+        this.kicks = structuredClone(Tetra.DEFAULT_KICKS);
         this.reset_mode();
-
         this.queue = this.shuffle(Object.keys(Tetra.MINOS), this.customizations.queue_type);
-        this.held = null;
-        this.hold_used = false;
-        this.update_gravity();
-        this.gravity_time = 0;
-        
-        this.b2b = -1;
-        this.combo = -1;
-        this.last_clear = '';
-        this.finesse_keys = 0;
-        this.finished = 0;
 
-        this.move_time = 0;
+        this.update_gravity();
+        this.finish_time = null;
+        this.gravity_time = null;
+
+        this.das_time = null;
         const key_hold_old = this.key_hold;
-        this.key_hold = [0, 0, 0];
-        if (key_hold_old[1] === 1) this.soft_drop_press(current_time);
+        this.key_hold = [0, key_hold_old[1], 0];
         if (key_hold_old[0] === 1) this.move_press(-1, current_time);
         else if (key_hold_old[2] === 1) this.move_press(1, current_time);
         if (key_hold_old[0] === 2) this.move_press(-1, current_time);
@@ -274,7 +273,7 @@ class Tetra { // TODO: review 180 kicks
         this.stats.keys = 0;
         this.stats.time = current_time;
         if (this.mode === 'blitz') this.finish_time = current_time + 120000;
-        if (this.move_time) this.move_time = Math.min(this.move_time, current_time);
+        if (this.das_time) this.das_time = (this.das_time < current_time) ? current_time : this.das_time;
 
         this.new_piece(this.queue.shift(), current_time);
     }
@@ -290,19 +289,18 @@ class Tetra { // TODO: review 180 kicks
             this.paused = true;
             return;
         }
-        this.stats.time = current_time - this.stats.time;
-        // this.gravity_time = current_time - this.gravity_time;
-        // if (this.move_time > 0)
-        //     this.move_time = current_time - this.move_time;
-        if (this.lock_time > 0)
-            this.lock_time = current_time - this.lock_time;
-        if (this.finish_time > 0)
-            this.finish_time = current_time - this.finish_time;
         if (this.paused) {
-            this.move_time = 0;
+            this.stats.time = current_time - this.stats.time;
+            if (this.lock_time !== null) this.lock_time += current_time;
+            if (this.finish_time !== null) this.finish_time += current_time;
+            this.gravity_time += current_time;
+            const new_gravity_time = current_time + this.gravity;
+            this.gravity_time = (this.gravity_time < new_gravity_time) ? this.gravity_time : new_gravity_time;
+
+            // Reassign das_time by calling appropriate move_press to properly increment keys
+            this.das_time = null;
             const key_hold_old = this.key_hold;
-            this.key_hold = [0, 0, 0];
-            if (key_hold_old[1] === 1) this.soft_drop_press(current_time);
+            this.key_hold = [0, key_hold_old[1], 0];
             if (key_hold_old[0] === 1) this.move_press(-1, current_time);
             else if (key_hold_old[2] === 1) this.move_press(1, current_time);
             if (key_hold_old[0] === 2) this.move_press(-1, current_time);
@@ -311,6 +309,11 @@ class Tetra { // TODO: review 180 kicks
             this.paused = false; // needs to come after the move_press() calls
         } else {
             this.paused = true;
+
+            this.stats.time = current_time - this.stats.time;
+            if (this.lock_time !== null) this.lock_time -= current_time;
+            if (this.finish_time !== null) this.finish_time -= current_time;
+            this.gravity_time -= current_time;
         }
     }
 
@@ -348,7 +351,7 @@ class Tetra { // TODO: review 180 kicks
         if (this.queue.length < 8) this.queue.push(...this.shuffle(Object.keys(Tetra.MINOS), this.customizations.queue_type, this.queue[this.queue.length - 1]));
 
         this.gravity_time = current_time + this.gravity;
-        this.lock_time = 0;
+        this.lock_time = null;
         this.lock_count = 0;
         this.lock_lowest = 18;
         this.update_height();
@@ -430,7 +433,7 @@ class Tetra { // TODO: review 180 kicks
         this.stats.keys++;
         this.finesse_keys++;
         this.key_hold[direction + 1] = this.key_hold[1 - direction] + 1;
-        this.move_time = current_time + this.stats.DAS;
+        this.das_time = current_time + this.stats.DAS;
 
         if (!this.paused) this.move(direction, current_time);
     }
@@ -439,9 +442,9 @@ class Tetra { // TODO: review 180 kicks
         const opposite = 1 - direction;
         this.key_hold[direction + 1] = 0;
         if (this.key_hold[opposite] === 0) {
-            this.move_time = 0;
+            this.das_time = null;
         } else if (this.key_hold[opposite] === 1) {
-            this.move_time = current_time + this.stats.DAS; // DAS added back to prevent "DAS skip"
+            this.das_time = current_time + this.stats.DAS; // DAS added back to prevent "DAS skip"
         } else {
             this.key_hold[opposite] = 1;
         }
@@ -679,9 +682,9 @@ class Tetra { // TODO: review 180 kicks
             this.lock_lowest = this.position[1];
             this.lock_count = 0;
         }
-        if (this.lock_time > 0) {
+        if (this.lock_time) {
             if (this.height > 0) { // stop condition
-                this.lock_time = 0;
+                this.lock_time = null;
             } else if (actions > 0 && this.customizations.lock_type > 0) { // reset condition
                 if (this.lock_count < this.lock_delay['count']) {
                     this.lock_time = current_time + this.lock_delay['time'];
@@ -719,17 +722,17 @@ class Tetra { // TODO: review 180 kicks
         const step = this.key_hold[2] - this.key_hold[0];
         if (this.stats.ARR === 0) {
             this.move(9 * step, current_time);
-            this.move_time += 1; // TODO: set to 0 and wake up with drop and rotate 
+            this.das_time += 1; // TODO: set to 0 and wake up with drop and rotate 
         } else {
             this.move(step, current_time);
-            this.move_time += this.stats.ARR;
+            this.das_time += this.stats.ARR;
         }
     }
 
     frame_update(current_time) {
-        let next_time = Math.min(this.gravity_time || Infinity, this.lock_time || Infinity, this.move_time || Infinity, this.finish_time || Infinity);
+        let next_time = Math.min(this.gravity_time ?? Infinity, this.lock_time ?? Infinity, this.das_time ?? Infinity, this.finish_time ?? Infinity);
         while (!this.finished && next_time < current_time) {
-            if (this.move_time === next_time) {
+            if (this.das_time === next_time) {
                 this.das_tick(next_time);
             }
             if (this.gravity_time === next_time) {
@@ -741,7 +744,7 @@ class Tetra { // TODO: review 180 kicks
             if (this.finish_time === next_time) {
                 this.stop(next_time, 1);
             }
-            next_time = Math.min(this.gravity_time || Infinity, this.lock_time || Infinity, this.move_time || Infinity, this.finish_time || Infinity);
+            next_time = Math.min(this.gravity_time ?? Infinity, this.lock_time ?? Infinity, this.das_time ?? Infinity, this.finish_time ?? Infinity);
         }
         return this.finished;
     }
