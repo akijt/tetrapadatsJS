@@ -2,6 +2,10 @@ class Play extends Screen {
     constructor(engine, game) {
         super(engine);
         this.game = game;
+
+        this.bg_canvas = document.createElement('canvas');
+        this.bg_ctx = this.bg_canvas.getContext('2d');
+        this.resizeHandler();
     }
 
     update(current_time) {
@@ -12,109 +16,96 @@ class Play extends Screen {
     }
 
     render(current_time) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         // CLEAR SCREEN
         this.engine.ctx.clearRect(0, 0, w, h);
-
-        // this.engine.ctx.beginPath();
-        // this.engine.ctx.strokeStyle = 'rgb(255, 255, 255)';
-        // this.engine.ctx.moveTo(mid_x, 0);
-        // this.engine.ctx.lineTo(mid_x, h);
-        // this.engine.ctx.moveTo(0, mid_y);
-        // this.engine.ctx.lineTo(w, mid_y);
-        // this.engine.ctx.stroke();
+        this.engine.ctx.drawImage(this.bg_canvas, 0, 0);
 
         // PRINT BOARD
-        this.engine.ctx.beginPath();
-        this.engine.ctx.strokeStyle = 'rgb(255, 255, 255)';
-        this.engine.ctx.lineWidth = Math.ceil(tile_size / 16);
-        for (let r = 0; r < 20; r++) {
+        for (let r = 0; r < 25; r++) {
+            let top = mid_y + (9 - r) * tile_size;
             for (let c = 0; c < 10; c++) {
-                if (this.game.board[r][c] == null) {
-                    this.engine.ctx.rect(mid_x + (-5 + c) * tile_size, mid_y + (9 - r) * tile_size, tile_size, tile_size);
+                const cell = this.game.board[r][c];
+                if (cell !== null && (cell !== 'x' || r < 20)) {
+                    this.engine.ctx.fillStyle = this.game.colors[cell];
+                    let left = mid_x + (-5 + c) * tile_size;
+                    this.engine.ctx.fillRect(left, top, tile_size, tile_size);
                 }
-            }
-        }
-        this.engine.ctx.stroke();
-        for (let r = 0; r < 40; r++) {
-            for (let c = 0; c < 10; c++) {
-                if (this.game.board[r][c] != null && (r < 20 || this.game.board[r][c] != 'x')) {
-                    this.engine.ctx.fillStyle = this.game.colors[this.game.board[r][c]];
-                    this.engine.ctx.fillRect(mid_x + (-5 + c) * tile_size, mid_y + (9 - r) * tile_size, tile_size, tile_size);
-                }
-            }
-        }
-
-        // PRINT TARGET PIECE
-        this.engine.ctx.fillStyle = this.game.colors['x'];
-        if (this.game.customizations.target) {
-            for (let i = 0; i < 4; i++) {
-                let [dc, dr] = Tetra.MINOS[this.game.piece][this.game.target.rotation][i];
-                let left = mid_x + (-5 + this.game.target.position[0] + dc) * tile_size;
-                let top = mid_y + (9 - this.game.target.position[1] - dr) * tile_size;
-                this.engine.ctx.fillRect(left, top, tile_size, tile_size);
-            }
-        }
-
-        // PRINT GHOST PIECE
-        if (this.game.customizations.ghost) {
-            this.engine.ctx.globalAlpha = 0.5;
-            for (let i = 0; i < 4; i++) {
-                let [dc, dr] = Tetra.MINOS[this.game.piece][this.game.rotation][i];
-                let left = mid_x + (-5 + this.game.position[0] + dc) * tile_size;
-                let top = mid_y + (9 - this.game.position[1] - dr + this.game.height) * tile_size;
-                this.engine.ctx.fillStyle = this.game.colors[this.game.piece];
-                this.engine.ctx.fillRect(left, top, tile_size, tile_size);
-            }
-            this.engine.ctx.globalAlpha = 1.0;
-        }
-
-        // PRINT CURRENT PIECE
-        this.engine.ctx.fillStyle = this.game.colors[this.game.piece];
-        for (let i = 0; i < 4; i++) {
-            let [dc, dr] = Tetra.MINOS[this.game.piece][this.game.rotation][i];
-            let left = mid_x + (-5 + this.game.position[0] + dc) * tile_size;
-            let top = mid_y + (9 - this.game.position[1] - dr) * tile_size;
-            this.engine.ctx.fillRect(left, top, tile_size, tile_size);
-        }
-
-        // PRINT HELD PIECE
-        if (this.game.held != null) {
-            if (this.game.hold_used) {
-                this.engine.ctx.fillStyle = this.game.colors['x'];
-            } else {
-                this.engine.ctx.fillStyle = this.game.colors[this.game.held];
-            }
-            for (let i = 0; i < 4; i++) {
-                let [dc, dr] = Tetra.MINOS[this.game.held][0][i];
-                let left = mid_x + (-10 + dc) * tile_size;
-                let top = mid_y + (-9 - dr) * tile_size;
-                this.engine.ctx.fillRect(left, top, tile_size, tile_size);
             }
         }
 
         // PRINT NEXT PIECES
         for (let j = 0; j < this.game.customizations.next; j++) {
             this.engine.ctx.fillStyle = this.game.colors[this.game.queue[j]];
+            const minos_piece_rotation = Tetra.MINOS[this.game.queue[j]][0];
             for (let i = 0; i < 4; i++) {
-                let [dc, dr] = Tetra.MINOS[this.game.queue[j]][0][i];
-                let left = mid_x + (6 + dc) * tile_size;
-                let top = mid_y + (-9 - dr + 3 * j) * tile_size;
+                const delta = minos_piece_rotation[i];
+                let left = mid_x + (6 + delta[0]) * tile_size;
+                let top = mid_y + (-9 - delta[1] + 3 * j) * tile_size;
                 this.engine.ctx.fillRect(left, top, tile_size, tile_size);
             }
         }
 
-        // PRINT TEXT
+        // PRINT HELD PIECE
+        if (this.game.held !== null) {
+            if (this.game.hold_used) {
+                this.engine.ctx.fillStyle = this.game.colors['x'];
+            } else {
+                this.engine.ctx.fillStyle = this.game.colors[this.game.held];
+            }
+            const minos_piece_rotation = Tetra.MINOS[this.game.held][0];
+            for (let i = 0; i < 4; i++) {
+                const delta = minos_piece_rotation[i];
+                let left = mid_x + (-10 + delta[0]) * tile_size;
+                let top = mid_y + (-9 - delta[1]) * tile_size;
+                this.engine.ctx.fillRect(left, top, tile_size, tile_size);
+            }
+        }
+
+        // PRINT TARGET PIECE
+        if (this.game.customizations.target) {
+            const minos_piece_rotation = Tetra.MINOS[this.game.piece][this.game.target.rotation];
+            this.engine.ctx.fillStyle = this.game.colors['x'];
+            for (let i = 0; i < 4; i++) {
+                const delta = minos_piece_rotation[i];
+                let left = mid_x + (-5 + this.game.target.position[0] + delta[0]) * tile_size;
+                let top = mid_y + (9 - this.game.target.position[1] - delta[1]) * tile_size;
+                this.engine.ctx.fillRect(left, top, tile_size, tile_size);
+            }
+        }
+
+        // PRINT GHOST PIECE
+        const minos_piece_rotation = Tetra.MINOS[this.game.piece][this.game.rotation];
+        this.engine.ctx.fillStyle = this.game.colors[this.game.piece];
+        if (this.game.customizations.ghost && this.game.height !== 0) {
+            this.engine.ctx.save();
+            this.engine.ctx.globalAlpha = 0.5;
+            for (let i = 0; i < 4; i++) {
+                const delta = minos_piece_rotation[i];
+                let left = mid_x + (-5 + this.game.position[0] + delta[0]) * tile_size;
+                let top = mid_y + (9 - this.game.position[1] - delta[1] + this.game.height) * tile_size;
+                this.engine.ctx.fillRect(left, top, tile_size, tile_size);
+            }
+            this.engine.ctx.restore();
+        }
+
+        // PRINT CURRENT PIECE
+        for (let i = 0; i < 4; i++) {
+            const delta = minos_piece_rotation[i];
+            let left = mid_x + (-5 + this.game.position[0] + delta[0]) * tile_size;
+            let top = mid_y + (9 - this.game.position[1] - delta[1]) * tile_size;
+            this.engine.ctx.fillRect(left, top, tile_size, tile_size);
+        }
+
+        // PRINT STAT TEXT
         this.engine.ctx.fillStyle = 'rgb(255, 255, 255)';
         this.engine.ctx.textBaseline = 'bottom';
-
         this.engine.ctx.font = `${tile_size * 2}px Arial`;
         this.engine.ctx.textAlign = 'center';
         this.engine.ctx.fillText(this.game.stats.mode, mid_x + (0) * tile_size, mid_y + (12) * tile_size);
 
         this.engine.ctx.textAlign = 'left';
-        // this.engine.ctx.fillText(this.engine.debug, mid_x + (6) * tile_size, mid_y + (3) * tile_size);
         this.engine.ctx.fillText(this.game.stats.score, mid_x + (6) * tile_size, mid_y + (6) * tile_size);
         const t = current_time - this.game.stats.time;
         const m = Math.floor(t / 60000);
@@ -128,19 +119,54 @@ class Play extends Screen {
         this.engine.ctx.fillText(this.game.stats.level, mid_x + (-6) * tile_size, mid_y + (9) * tile_size);
 
         this.engine.ctx.font = `${tile_size}px Arial`;
-        this.engine.ctx.textAlign = 'left';
-        // this.engine.ctx.fillText(this.engine.debug ? 'debug:' : '', mid_x + (6) * tile_size, mid_y + (1) * tile_size);
-        this.engine.ctx.fillText('score:', mid_x + (6) * tile_size, mid_y + (4) * tile_size);
-        this.engine.ctx.fillText('time:', mid_x + (6) * tile_size, mid_y + (7) * tile_size);
-
-        this.engine.ctx.textAlign = 'right';
         this.engine.ctx.fillText((this.game.b2b > 0) ? `${this.game.b2b} B2B` : '', mid_x + (-6) * tile_size, mid_y + (-5) * tile_size);
         this.engine.ctx.fillText(this.game.last_clear, mid_x + (-6) * tile_size, mid_y + (-4) * tile_size);
         this.engine.ctx.fillText((this.game.combo > 0) ? `${this.game.combo} combo` : '', mid_x + (-6) * tile_size, mid_y + (-3) * tile_size);
-        this.engine.ctx.fillText('pieces:', mid_x + (-6) * tile_size, mid_y + (1) * tile_size);
-        this.engine.ctx.fillText('lines:', mid_x + (-6) * tile_size, mid_y + (4) * tile_size);
-        this.engine.ctx.fillText('level:', mid_x + (-6) * tile_size, mid_y + (7) * tile_size);
     }
+
+    resizeHandler(e, current_time) {
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
+
+        // ADJUST BACKGROUND CANVAS
+        this.bg_canvas.width = w;
+        this.bg_canvas.height = h;
+        this.bg_ctx.clearRect(0, 0, w, h);
+
+        // PRINT GRID
+        this.bg_ctx.beginPath();
+        this.bg_ctx.strokeStyle = 'rgb(255, 255, 255)';
+        this.bg_ctx.lineWidth = Math.ceil(tile_size / 32) * 2;
+        const board_x = mid_x - 5 * tile_size;
+        const board_y = mid_y - 10 * tile_size;
+        const board_w = 10 * tile_size;
+        const board_h = 20 * tile_size;
+        this.bg_ctx.rect(board_x, board_y, board_w, board_h);
+        for (let c = 1; c < 10; c++) {
+            const x = board_x + c * tile_size;
+            this.bg_ctx.moveTo(x, board_y);
+            this.bg_ctx.lineTo(x, board_y + board_h);
+        }
+        for (let r = 1; r < 20; r++) {
+            const y = board_y + r * tile_size;
+            this.bg_ctx.moveTo(board_x, y);
+            this.bg_ctx.lineTo(board_x + board_w, y);
+        }
+        this.bg_ctx.stroke();
+
+        // PRINT LABEL TEXT
+        this.bg_ctx.fillStyle = 'rgb(255, 255, 255)';
+        this.bg_ctx.textBaseline = 'bottom';
+        this.bg_ctx.font = `${tile_size}px Arial`;
+        this.bg_ctx.textAlign = 'left';
+        this.bg_ctx.fillText('score:', mid_x + (6) * tile_size, mid_y + (4) * tile_size);
+        this.bg_ctx.fillText('time:', mid_x + (6) * tile_size, mid_y + (7) * tile_size);
+
+        this.bg_ctx.textAlign = 'right';
+        this.bg_ctx.fillText('pieces:', mid_x + (-6) * tile_size, mid_y + (1) * tile_size);
+        this.bg_ctx.fillText('lines:', mid_x + (-6) * tile_size, mid_y + (4) * tile_size);
+        this.bg_ctx.fillText('level:', mid_x + (-6) * tile_size, mid_y + (7) * tile_size);
+    }
+
 
     keyDownHandler(e, current_time) {
         switch (e.code) {

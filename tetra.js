@@ -641,9 +641,9 @@ class Tetra { // TODO: review 180 kicks
         const pos_y = this.position[1];
 
         for (let i = 0; i < 4; i++) {
-            const block = minos_piece_rotation[i];
-            const c = pos_x + block[0];
-            const r = pos_y + block[1];
+            const delta = minos_piece_rotation[i];
+            const c = pos_x + delta[0];
+            const r = pos_y + delta[1];
             if (c < 0 || c > 9 || r < 0 || board[r][c] !== null) return true;
         }
         return false;
@@ -657,9 +657,9 @@ class Tetra { // TODO: review 180 kicks
 
         let new_height = 40;
         for (let i = 0; i < 4; i++) {
-            const block = minos_piece_rotation[i];
-            const c = pos_x + block[0];
-            let r = pos_y + block[1] - 1;
+            const delta = minos_piece_rotation[i];
+            const c = pos_x + delta[0];
+            let r = pos_y + delta[1] - 1;
 
             let drop = 0;
             while (r >= 0 && board[r][c] === null) {

@@ -9,22 +9,26 @@ class Screen {
         this.enter_time = current_time;
     }
 
-    exit_state(count = 1) {
+    exit_state(current_time, count = 1) {
         while (count > 0 && this.engine.state_stack.length > 0) {
             this.engine.state_stack.pop();
             count--;
         }
+        this.engine.state_stack[this.engine.state_stack.length - 1]?.resume_state?.(current_time);
     }
 
+    resume_state(current_time) {}
+
     update(current_time) {
-        console.error('update not implemented')
+        console.error('update not implemented');
     }
 
     render(current_time) {
-        console.error('render not implemented')
+        console.error('render not implemented');
     }
 
     textInputHandler(e, current_time) {}
+    resizeHandler(e, current_time) {}
     keyDownHandler(e, current_time) {}
     keyUpHandler(e, current_time) {}
     mouseDownHandler(e, current_time) {}
@@ -36,15 +40,22 @@ class Screen {
 }
 
 class Engine {
-    constructor() {
+    constructor(aspect_w = 4, aspect_h = 3, grid_scale = 10) {
         this.canvas = document.getElementById('myCanvas');
         this.ctx = this.canvas.getContext('2d');
 
+        this.aspect_w = aspect_w;
+        this.aspect_h = aspect_h;
+        this.grid_scale = grid_scale;
+        this.grid_w = this.aspect_w * this.grid_scale;
+        this.grid_h = this.aspect_h * this.grid_scale;
+
+        this.dpr = 1;
         this.w = 0;
         this.h = 0;
-        this.tile_size = 0;
         this.mid_x = 0;
         this.mid_y = 0;
+        this.tile_size = 0;
 
         const input_codes = [
             // Mouse
@@ -112,13 +123,28 @@ class Engine {
     }
 
     resizeHandler(e) {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        this.w = this.canvas.width;
-        this.h = this.canvas.height;
-        this.tile_size = Math.floor(Math.min(this.w / 40, this.h / 30));
+        this.dpr = window.devicePixelRatio || 1;
+        this.w = window.innerWidth;
+        this.h = window.innerHeight;
         this.mid_x = Math.floor(this.w / 2);
         this.mid_y = Math.floor(this.h / 2);
+        this.tile_size = Math.floor(Math.min(this.w / this.grid_w, this.h / this.grid_h));
+
+        // Logical screen pixels
+        this.canvas.style.width = `${window.innerWidth}px`;
+        this.canvas.style.height = `${window.innerHeight}px`;
+
+        // Physical screen pixels
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        // this.canvas.width = Math.floor(window.innerWidth * this.dpr);
+        // this.canvas.height = Math.floor(window.innerHeight * this.dpr);
+
+        // this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        // this.ctx.scale(this.dpr, this.dpr);
+
+        const current_time = Math.floor(performance.now());
+        this.state_stack.forEach(screen => screen.resizeHandler?.(e, current_time));
     }
 
     keyDownHandler(e) {

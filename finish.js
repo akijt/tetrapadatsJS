@@ -25,7 +25,7 @@ class Finish extends Screen {
     }
 
     render(current_time) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         // CLEAR SCREEN
         this.engine.ctx.clearRect(0, 0, w, h);
@@ -42,11 +42,11 @@ class Finish extends Screen {
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.exit_state(2);
+                this.exit_state(current_time, 2);
                 break;
             case this.game.bindings['reset']:
                 this.game.action_handler('reset', current_time);
-                this.exit_state();
+                this.exit_state(current_time);
                 new Ready(this.engine, this.game).enter_state(current_time);
                 break;
         }

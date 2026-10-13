@@ -12,7 +12,7 @@ class Settings extends Screen {
     }
 
     render(current_time) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         // CLEAR SCREEN
         this.engine.ctx.clearRect(0, 0, w, h);
@@ -58,7 +58,7 @@ class Settings extends Screen {
         this.engine.ctx.fillText((this.game.handling['SDF'] === 0 ? 'instant' : this.game.handling['SDF'] + 'x'), mid_x + (11) * tile_size, mid_y + (4) * tile_size);
 
         this.engine.ctx.save();
-        this.engine.ctx.lineWidth = Math.ceil(tile_size / 4);
+        this.engine.ctx.lineWidth = Math.ceil(tile_size / 8) * 2;
         this.engine.ctx.lineCap = 'round';
         this.engine.ctx.beginPath();
         this.engine.ctx.moveTo(mid_x + (1) * tile_size, mid_y + (-5) * tile_size);
@@ -122,7 +122,7 @@ class Settings extends Screen {
     }
 
     updateSlider(e) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         const minX = mid_x + 1 * tile_size;
         const maxX = mid_x + 11 * tile_size;
@@ -138,7 +138,7 @@ class Settings extends Screen {
     }
 
     mouseDownHandler(e, current_time) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         if (['DAS', 'ARR', 'SDF'].includes(this.selection)) {
             this.updateSlider(e);
@@ -157,10 +157,12 @@ class Settings extends Screen {
         }
         switch (e.code) {
             case this.game.bindings['quit']:
-                if (Object.values(this.game.bindings).includes('##########'))
+                if (Object.values(this.game.bindings).includes('##########')) {
                     this.flash_time = current_time + 3000;
-                else
-                    this.exit_state();
+                } else {
+                    document.body.style.cursor = 'default';
+                    this.exit_state(current_time);
+                }
                 break;
         }
     }
@@ -170,10 +172,12 @@ class Settings extends Screen {
             this.game.set_bindings({[this.selection]: this.last_binding});
             this.last_binding = null;
         } else if (this.selection === 'back') {
-            if (Object.values(this.game.bindings).includes('##########'))
+            if (Object.values(this.game.bindings).includes('##########')) {
                 this.flash_time = current_time + 3000;
-            else
-                this.exit_state();
+            } else {
+                document.body.style.cursor = 'default';
+                this.exit_state(current_time);
+            }
         } else if (this.selection === 'developer') {
             document.body.style.cursor = 'default';
             this.game.set_bindings({'quit'      : 'KeyQ',
@@ -187,7 +191,7 @@ class Settings extends Screen {
                                     'soft_drop' : 'Comma',
                                     'hard_drop' : 'Space'});
             this.game.set_handling({'DAS': 100, 'ARR': 0, 'SDF': 0})
-        } else if (this.selection != '' && !['DAS', 'ARR', 'SDF'].includes(this.selection)) {
+        } else if (this.selection !== '' && !['DAS', 'ARR', 'SDF'].includes(this.selection)) {
             document.body.style.cursor = 'default';
             this.last_binding = this.game.bindings[this.selection];
             this.game.set_bindings({[this.selection]: '...'});
@@ -195,7 +199,7 @@ class Settings extends Screen {
     }
 
     moveHandler(e, current_time) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         if (['DAS', 'ARR', 'SDF'].includes(this.selection) && this.engine.input_state['Mouse0']) {
             this.updateSlider(e);
