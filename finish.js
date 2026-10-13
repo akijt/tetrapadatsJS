@@ -1,6 +1,6 @@
 class Finish extends Screen {
-    constructor(engine, game) {
-        super(engine);
+    constructor(prev = null, engine, game) {
+        super(prev, engine);
         this.game = game;
         this.result = '';
         if (this.game.finished === 1) {
@@ -42,12 +42,12 @@ class Finish extends Screen {
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.exit_state(current_time, 2);
+                this.pop_state(current_time, 2);
                 break;
             case this.game.bindings['reset']:
                 this.game.action_handler('reset', current_time);
-                this.exit_state(current_time);
-                new Ready(this.engine, this.game).enter_state(current_time);
+                const play_screen = this.pop_state(current_time);
+                new Ready(play_screen, this.engine, this.game).push_state(current_time);
                 break;
         }
     }

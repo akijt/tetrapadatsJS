@@ -1,6 +1,6 @@
 class Ready extends Screen {
-    constructor(engine, game) {
-        super(engine);
+    constructor(prev = null, engine, game) {
+        super(prev, engine);
         this.game = game;
         this.countdown_duration = 3000;
     }
@@ -8,7 +8,7 @@ class Ready extends Screen {
     update(current_time) {
         if (current_time - this.enter_time > this.countdown_duration) {
             this.game.action_handler('start', current_time);
-            this.exit_state(current_time);
+            this.pop_state(current_time);
         }
     }
 
@@ -17,8 +17,10 @@ class Ready extends Screen {
 
         // CLEAR SCREEN
         this.engine.ctx.clearRect(0, 0, w, h);
-        const play_screen = this.engine.state_stack[this.engine.state_stack.length - 2];
-        this.engine.ctx.drawImage(play_screen.bg_canvas, 0, 0);
+
+        // PRINT BACKGROUND
+        const bg_canvas = this.prev.get_layer('background').canvas;
+        this.engine.ctx.drawImage(bg_canvas, 0, 0);
 
         // PRINT BOARD
         for (let r = 0; r < 25; r++) {
@@ -89,7 +91,7 @@ class Ready extends Screen {
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.exit_state(current_time, 2);
+                this.pop_state(current_time, 2);
                 break;
             case this.game.bindings['reset']:
                 this.game.action_handler('reset', current_time);

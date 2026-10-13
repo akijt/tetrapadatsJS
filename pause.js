@@ -1,6 +1,6 @@
 class Pause extends Screen {
-    constructor(engine, game) {
-        super(engine);
+    constructor(prev = null, engine, game) {
+        super(prev, engine);
         this.game = game;
     }
 
@@ -12,8 +12,10 @@ class Pause extends Screen {
 
         // CLEAR SCREEN
         this.engine.ctx.clearRect(0, 0, w, h);
-        const play_screen = this.engine.state_stack[this.engine.state_stack.length - 2];
-        this.engine.ctx.drawImage(play_screen.bg_canvas, 0, 0);
+        
+        // PRINT BACKGROUND
+        const bg_canvas = this.prev.get_layer('background').canvas;
+        this.engine.ctx.drawImage(bg_canvas, 0, 0);
 
         // PRINT STAT TEXT
         this.engine.ctx.fillStyle = 'rgb(255, 255, 255)';
@@ -53,12 +55,12 @@ class Pause extends Screen {
         switch (e.code) {
             case this.game.bindings['quit']:
                 this.game.action_handler('pause', current_time);
-                this.exit_state(current_time);
+                this.pop_state(current_time);
                 break;
             case this.game.bindings['reset']:
                 this.game.action_handler('reset', current_time);
-                this.exit_state(current_time);
-                new Ready(this.engine, this.game).enter_state(current_time);
+                this.pop_state(current_time);
+                new Ready(this.prev, this.engine, this.game).push_state(current_time);
                 break;
             case this.game.bindings['move_left']:
                 this.game.action_handler('move_left_press', current_time);

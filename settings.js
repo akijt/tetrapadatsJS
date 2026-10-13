@@ -1,6 +1,6 @@
 class Settings extends Screen {
-    constructor(engine, game) {
-        super(engine);
+    constructor(prev = null, engine, game) {
+        super(prev, engine);
         this.game = game;
         this.selection = '';
 
@@ -161,7 +161,7 @@ class Settings extends Screen {
                     this.flash_time = current_time + 3000;
                 } else {
                     document.body.style.cursor = 'default';
-                    this.exit_state(current_time);
+                    this.pop_state(current_time);
                 }
                 break;
         }
@@ -176,7 +176,7 @@ class Settings extends Screen {
                 this.flash_time = current_time + 3000;
             } else {
                 document.body.style.cursor = 'default';
-                this.exit_state(current_time);
+                this.pop_state(current_time);
             }
         } else if (this.selection === 'developer') {
             document.body.style.cursor = 'default';

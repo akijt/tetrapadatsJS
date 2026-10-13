@@ -1,11 +1,12 @@
 class Menu extends Screen {
-    constructor(engine, game) {
-        super(engine);
+    constructor(prev = null, engine, game) {
+        super(prev, engine);
         this.game = game;
         this.selection = '';
     }
 
-    resume_state(current_time) {
+    enter_state(current_time) {
+        super.enter_state(current_time);
         this.selection = '';
     }
 
@@ -67,8 +68,8 @@ class Menu extends Screen {
                 this.game.set_mode('marathon');
                 this.game.set_level(1);
                 this.game.action_handler('reset', current_time);
-                new Play(this.engine, this.game).enter_state(current_time);
-                new Ready(this.engine, this.game).enter_state(current_time);
+                const play_screen = new Play(this, this.engine, this.game).push_state(current_time);
+                new Ready(play_screen, this.engine, this.game).push_state(current_time);
                 break;
         }
     }
@@ -76,14 +77,14 @@ class Menu extends Screen {
     clickHandler(e, current_time) {
         if (this.selection === 'settings') {
             document.body.style.cursor = 'default';
-            new Settings(this.engine, this.game).enter_state(current_time);
+            new Settings(this, this.engine, this.game).push_state(current_time);
         } else if (this.selection !== '') {
             document.body.style.cursor = 'default';
             this.game.set_mode(this.selection);
             this.game.set_level(1);
             this.game.action_handler('reset', current_time);
-            new Play(this.engine, this.game).enter_state(current_time);
-            new Ready(this.engine, this.game).enter_state(current_time);
+            const play_screen = new Play(this, this.engine, this.game).push_state(current_time);
+            new Ready(play_screen, this.engine, this.game).push_state(current_time);
         }
     }
 

@@ -106,4 +106,4 @@ No build tools or package managers required.
 - [ ] **Inputs on Mobile:** Make gameplay possible when accessed from a touchscreen device.
 - [ ] **Server Autoritative Model:** Host and communicate with a server that validates gameplay.
 - [ ] **Database:** Enable record keeping with a database, storing game config and scores.
-- [ ] **Screen Class Update:** Overhaul Screen class to work as a singly linked list, managing it's own layers.
+- [x] **Screen Class Update:** Overhaul Screen class to work as a singly linked list with each managing it's own static layers.

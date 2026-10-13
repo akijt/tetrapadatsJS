@@ -1,17 +1,15 @@
 class Play extends Screen {
-    constructor(engine, game) {
-        super(engine);
+    constructor(prev = null, engine, game) {
+        super(prev, engine);
         this.game = game;
 
-        this.bg_canvas = document.createElement('canvas');
-        this.bg_ctx = this.bg_canvas.getContext('2d');
-        this.resizeHandler();
+        this.add_layer('background');
     }
 
     update(current_time) {
         if (this.game.frame_update(current_time)) {
             this.game.action_handler('pause', current_time);
-            new Finish(this.engine, this.game).enter_state(current_time);
+            new Finish(this, this.engine, this.game).push_state(current_time);
         }
     }
 
@@ -20,7 +18,10 @@ class Play extends Screen {
 
         // CLEAR SCREEN
         this.engine.ctx.clearRect(0, 0, w, h);
-        this.engine.ctx.drawImage(this.bg_canvas, 0, 0);
+
+        // PRINT BACKGROUND
+        const bg_canvas = this.get_layer('background').canvas;
+        this.engine.ctx.drawImage(bg_canvas, 0, 0);
 
         // PRINT BOARD
         for (let r = 0; r < 25; r++) {
@@ -128,43 +129,46 @@ class Play extends Screen {
         const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         // ADJUST BACKGROUND CANVAS
-        this.bg_canvas.width = w;
-        this.bg_canvas.height = h;
-        this.bg_ctx.clearRect(0, 0, w, h);
+        const layer = this.get_layer('background');
+        const bg_canvas = layer.canvas;
+        const bg_ctx = layer.ctx;
+        bg_canvas.width = w;
+        bg_canvas.height = h;
+        bg_ctx.clearRect(0, 0, w, h);
 
         // PRINT GRID
-        this.bg_ctx.beginPath();
-        this.bg_ctx.strokeStyle = 'rgb(255, 255, 255)';
-        this.bg_ctx.lineWidth = Math.ceil(tile_size / 32) * 2;
+        bg_ctx.beginPath();
+        bg_ctx.strokeStyle = 'rgb(255, 255, 255)';
+        bg_ctx.lineWidth = Math.ceil(tile_size / 32) * 2;
         const board_x = mid_x - 5 * tile_size;
         const board_y = mid_y - 10 * tile_size;
         const board_w = 10 * tile_size;
         const board_h = 20 * tile_size;
-        this.bg_ctx.rect(board_x, board_y, board_w, board_h);
+        bg_ctx.rect(board_x, board_y, board_w, board_h);
         for (let c = 1; c < 10; c++) {
             const x = board_x + c * tile_size;
-            this.bg_ctx.moveTo(x, board_y);
-            this.bg_ctx.lineTo(x, board_y + board_h);
+            bg_ctx.moveTo(x, board_y);
+            bg_ctx.lineTo(x, board_y + board_h);
         }
         for (let r = 1; r < 20; r++) {
             const y = board_y + r * tile_size;
-            this.bg_ctx.moveTo(board_x, y);
-            this.bg_ctx.lineTo(board_x + board_w, y);
+            bg_ctx.moveTo(board_x, y);
+            bg_ctx.lineTo(board_x + board_w, y);
         }
-        this.bg_ctx.stroke();
+        bg_ctx.stroke();
 
         // PRINT LABEL TEXT
-        this.bg_ctx.fillStyle = 'rgb(255, 255, 255)';
-        this.bg_ctx.textBaseline = 'bottom';
-        this.bg_ctx.font = `${tile_size}px Arial`;
-        this.bg_ctx.textAlign = 'left';
-        this.bg_ctx.fillText('score:', mid_x + (6) * tile_size, mid_y + (4) * tile_size);
-        this.bg_ctx.fillText('time:', mid_x + (6) * tile_size, mid_y + (7) * tile_size);
+        bg_ctx.fillStyle = 'rgb(255, 255, 255)';
+        bg_ctx.textBaseline = 'bottom';
+        bg_ctx.font = `${tile_size}px Arial`;
+        bg_ctx.textAlign = 'left';
+        bg_ctx.fillText('score:', mid_x + (6) * tile_size, mid_y + (4) * tile_size);
+        bg_ctx.fillText('time:', mid_x + (6) * tile_size, mid_y + (7) * tile_size);
 
-        this.bg_ctx.textAlign = 'right';
-        this.bg_ctx.fillText('pieces:', mid_x + (-6) * tile_size, mid_y + (1) * tile_size);
-        this.bg_ctx.fillText('lines:', mid_x + (-6) * tile_size, mid_y + (4) * tile_size);
-        this.bg_ctx.fillText('level:', mid_x + (-6) * tile_size, mid_y + (7) * tile_size);
+        bg_ctx.textAlign = 'right';
+        bg_ctx.fillText('pieces:', mid_x + (-6) * tile_size, mid_y + (1) * tile_size);
+        bg_ctx.fillText('lines:', mid_x + (-6) * tile_size, mid_y + (4) * tile_size);
+        bg_ctx.fillText('level:', mid_x + (-6) * tile_size, mid_y + (7) * tile_size);
     }
 
 
@@ -172,11 +176,11 @@ class Play extends Screen {
         switch (e.code) {
             case this.game.bindings['quit']:
                 this.game.action_handler('pause', current_time);
-                new Pause(this.engine, this.game).enter_state(current_time);
+                new Pause(this, this.engine, this.game).push_state(current_time);
                 break;
             case this.game.bindings['reset']:
                 this.game.action_handler('reset', current_time);
-                new Ready(this.engine, this.game).enter_state(current_time);
+                new Ready(this, this.engine, this.game).push_state(current_time);
                 break;
             case this.game.bindings['hold']:
                 this.game.action_handler('hold', current_time);
