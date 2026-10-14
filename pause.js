@@ -1,6 +1,6 @@
 class Pause extends Screen {
-    constructor(engine, game) {
-        super(engine);
+    constructor(prev = null, engine, game) {
+        super(prev, engine);
         this.game = game;
     }
 
@@ -8,34 +8,29 @@ class Pause extends Screen {
     }
 
     render(current_time) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         // CLEAR SCREEN
         this.engine.ctx.clearRect(0, 0, w, h);
+        
+        // PRINT BACKGROUND
+        const bg_canvas = this.prev.get_layer('background').canvas;
+        this.engine.ctx.drawImage(bg_canvas, 0, 0);
 
-        // PRINT BOARD
-        this.engine.ctx.beginPath();
-        this.engine.ctx.strokeStyle = 'rgb(255, 255, 255)';
-        this.engine.ctx.lineWidth = Math.ceil(tile_size / 16);
-        for (let r = 0; r < 20; r++) {
-            for (let c = 0; c < 10; c++) {
-                this.engine.ctx.rect(mid_x + (-5 + c) * tile_size, mid_y + (9 - r) * tile_size, tile_size, tile_size);
-            }
-        }
-        this.engine.ctx.stroke();
-
-        // PRINT TEXT
+        // PRINT STAT TEXT
         this.engine.ctx.fillStyle = 'rgb(255, 255, 255)';
         this.engine.ctx.textBaseline = 'bottom';
-
         this.engine.ctx.font = `${tile_size * 2}px Arial`;
         this.engine.ctx.textAlign = 'center';
         this.engine.ctx.fillText(this.game.stats.mode, mid_x + (0) * tile_size, mid_y + (12) * tile_size);
 
         this.engine.ctx.textAlign = 'left';
-        // this.engine.ctx.fillText(this.engine.debug, mid_x + (6) * tile_size, mid_y + (3) * tile_size);
         this.engine.ctx.fillText(this.game.stats.score, mid_x + (6) * tile_size, mid_y + (6) * tile_size);
-        this.engine.ctx.fillText((this.game.stats.time / 1000).toFixed(3), mid_x + (6) * tile_size, mid_y + (9) * tile_size);
+        const t = this.game.stats.time;
+        const m = Math.floor(t / 60000);
+        const s = Math.floor(t / 1000) % 60;
+        const ms = t % 1000;
+        this.engine.ctx.fillText(`${m}:${s < 10 ? '0' : ''}${s}.${ms < 100 ? (ms < 10 ? '00' : '0') : ''}${ms}`, mid_x + 6 * tile_size, mid_y + 9 * tile_size);
 
         this.engine.ctx.textAlign = 'right';
         this.engine.ctx.fillText(this.game.stats.pieces, mid_x + (-6) * tile_size, mid_y + (3) * tile_size);
@@ -43,50 +38,49 @@ class Pause extends Screen {
         this.engine.ctx.fillText(this.game.stats.level, mid_x + (-6) * tile_size, mid_y + (9) * tile_size);
 
         this.engine.ctx.font = `${tile_size}px Arial`;
-        this.engine.ctx.textAlign = 'left';
-        // this.engine.ctx.fillText(this.engine.debug ? 'debug:' : '', mid_x + (6) * tile_size, mid_y + (1) * tile_size);
-        this.engine.ctx.fillText('score:', mid_x + (6) * tile_size, mid_y + (4) * tile_size);
-        this.engine.ctx.fillText('time:', mid_x + (6) * tile_size, mid_y + (7) * tile_size);
-
-        this.engine.ctx.textAlign = 'right';
         this.engine.ctx.fillText((this.game.b2b > 0) ? `${this.game.b2b} B2B` : '', mid_x + (-6) * tile_size, mid_y + (-5) * tile_size);
         this.engine.ctx.fillText(this.game.last_clear, mid_x + (-6) * tile_size, mid_y + (-4) * tile_size);
         this.engine.ctx.fillText((this.game.combo > 0) ? `${this.game.combo} combo` : '', mid_x + (-6) * tile_size, mid_y + (-3) * tile_size);
-        this.engine.ctx.fillText('pieces:', mid_x + (-6) * tile_size, mid_y + (1) * tile_size);
-        this.engine.ctx.fillText('lines:', mid_x + (-6) * tile_size, mid_y + (4) * tile_size);
-        this.engine.ctx.fillText('level:', mid_x + (-6) * tile_size, mid_y + (7) * tile_size);
+
+        // PRINT PAUSE LABEL
+        this.engine.ctx.fillRect(mid_x + (-4) * tile_size, mid_y + (-1) * tile_size, 8 * tile_size, 2 * tile_size);
+
+        this.engine.ctx.fillStyle = 'rgb(0, 0, 0)';
+        this.engine.ctx.textAlign = 'center';
+        this.engine.ctx.font = `${tile_size * 2}px Arial`;
+        this.engine.ctx.fillText('paused', mid_x + (0) * tile_size, mid_y + (1) * tile_size);
     }
 
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.game.on_pause(current_time);
+                this.game.action_handler('pause', current_time);
                 socket.emit('action', { type: 'pause', time: current_time });
-                this.exit_state();
+                this.pop_state(current_time);
                 break;
             case this.game.bindings['reset']:
                 if (typeof io !== 'undefined' && socket.connected) {
                     socket.emit('action', { type: 'reset', time: current_time }, (response) => {
-                        this.game.on_reset(response.time, { seed: response.seed });
-                        this.exit_state();
-                        new Ready(this.engine, this.game).enter_state(response.time);
+                        this.game.action_handler('reset', response.time, { seed: response.seed });
+                        this.pop_state(response.time);
+                        new Ready(this.prev, this.engine, this.game).push_state(response.time);
                     });
                 } else {
-                    this.game.on_reset(current_time);
-                    this.exit_state();
-                    new Ready(this.engine, this.game).enter_state(current_time);
+                    this.game.action_handler('reset', current_time);
+                    this.pop_state(current_time);
+                    new Ready(this.prev, this.engine, this.game).push_state(current_time);
                 }
                 break;
             case this.game.bindings['move_left']:
-                this.game.on_move_left_press(current_time);
+                this.game.action_handler('move_left_press', current_time);
                 socket.emit('action', { type: 'move_left_press', time: current_time });
                 break;
             case this.game.bindings['move_right']:
-                this.game.on_move_right_press(current_time);
+                this.game.action_handler('move_right_press', current_time);
                 socket.emit('action', { type: 'move_right_press', time: current_time });
                 break;
             case this.game.bindings['soft_drop']:
-                this.game.on_soft_drop_press(current_time);
+                this.game.action_handler('soft_drop_press', current_time);
                 socket.emit('action', { type: 'soft_drop_press', time: current_time });
                 break;
         }
@@ -95,16 +89,16 @@ class Pause extends Screen {
     keyUpHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['move_left']:
-                this.game.on_move_left_unpress(current_time);
-                socket.emit('action', { type: 'move_left_unpress', time: current_time });
+                this.game.action_handler('move_left_release', current_time);
+                socket.emit('action', { type: 'move_left_release', time: current_time });
                 break;
             case this.game.bindings['move_right']:
-                this.game.on_move_right_unpress(current_time);
-                socket.emit('action', { type: 'move_right_unpress', time: current_time });
+                this.game.action_handler('move_right_release', current_time);
+                socket.emit('action', { type: 'move_right_release', time: current_time });
                 break;
             case this.game.bindings['soft_drop']:
-                this.game.on_soft_drop_unpress(current_time);
-                socket.emit('action', { type: 'soft_drop_unpress', time: current_time });
+                this.game.action_handler('soft_drop_release', current_time);
+                socket.emit('action', { type: 'soft_drop_release', time: current_time });
                 break;
         }
     }

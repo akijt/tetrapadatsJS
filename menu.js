@@ -1,15 +1,19 @@
 class Menu extends Screen {
-    constructor(engine, game) {
-        super(engine);
+    constructor(prev = null, engine, game) {
+        super(prev, engine);
         this.game = game;
         this.selection = '';
     }
 
-    update(current_time) {
+    enter_state(current_time) {
+        super.enter_state(current_time);
+        this.selection = '';
     }
 
+    update(current_time) {}
+
     render(current_time) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         // CLEAR SCREEN
         this.engine.ctx.clearRect(0, 0, w, h);
@@ -25,7 +29,7 @@ class Menu extends Screen {
         // PRINT BUTTONS
         this.engine.ctx.beginPath();
         this.engine.ctx.strokeStyle = 'rgb(255, 255, 255)';
-        this.engine.ctx.lineWidth = Math.ceil(tile_size / 8);
+        this.engine.ctx.lineWidth = Math.ceil(tile_size / 16) * 2;
         this.engine.ctx.rect(mid_x + (-4) * tile_size, mid_y + (-4) * tile_size, 2 * tile_size, 2 * tile_size);
         this.engine.ctx.rect(mid_x + (-1) * tile_size, mid_y + (-4) * tile_size, 2 * tile_size, 2 * tile_size);
         this.engine.ctx.rect(mid_x + (2) * tile_size, mid_y + (-4) * tile_size, 2 * tile_size, 2 * tile_size);
@@ -69,25 +73,25 @@ class Menu extends Screen {
                         socket.emit('config', { type: 'mode', value: 'marathon' });
                         socket.emit('config', { type: 'level', value: 1 });
                         socket.emit('action', { type: 'reset', time: current_time }, (response) => {
-                            this.game.on_reset(response.time, { seed: response.seed });
-                            new Play(this.engine, this.game).enter_state(response.time);
-                            new Ready(this.engine, this.game).enter_state(response.time);
+                            this.game.action_handler('reset', response.time, { seed: response.seed });
+                            const play_screen = new Play(this, this.engine, this.game).push_state(response.time);
+                            new Ready(play_screen, this.engine, this.game).push_state(response.time);
                         });
                     });
                 } else {
-                    this.game.on_reset(current_time);
-                    new Play(this.engine, this.game).enter_state(current_time);
-                    new Ready(this.engine, this.game).enter_state(current_time);
+                    this.game.action_handler('reset', current_time);
+                    const play_screen = new Play(this, this.engine, this.game).push_state(current_time);
+                    new Ready(play_screen, this.engine, this.game).push_state(current_time);
                 }
                 break;
         }
     }
 
     clickHandler(e, current_time) {
-        if (this.selection == 'settings') {
+        if (this.selection === 'settings') {
             document.body.style.cursor = 'default';
-            new Settings(this.engine, this.game).enter_state(current_time);
-        } else if (this.selection != '') {
+            new Settings(this, this.engine, this.game).push_state(current_time);
+        } else if (this.selection !== '') {
             document.body.style.cursor = 'default';
             this.game.set_mode(this.selection);
             this.game.set_level(1);
@@ -97,21 +101,21 @@ class Menu extends Screen {
                     socket.emit('config', { type: 'mode', value: this.selection });
                     socket.emit('config', { type: 'level', value: 1 });
                     socket.emit('action', { type: 'reset', time: current_time }, (response) => {
-                        this.game.on_reset(response.time, { seed: response.seed });
-                        new Play(this.engine, this.game).enter_state(response.time);
-                        new Ready(this.engine, this.game).enter_state(response.time);
+                        this.game.action_handler('reset', response.time, { seed: response.seed });
+                        const play_screen = new Play(this, this.engine, this.game).push_state(response.time);
+                        new Ready(play_screen, this.engine, this.game).push_state(response.time);
                     });
                 });
             } else {
-                this.game.on_reset(current_time);
-                new Play(this.engine, this.game).enter_state(current_time);
-                new Ready(this.engine, this.game).enter_state(current_time);
+                this.game.action_handler('reset', current_time);
+                const play_screen = new Play(this, this.engine, this.game).push_state(current_time);
+                new Ready(play_screen, this.engine, this.game).push_state(current_time);
             }
         }
     }
 
     moveHandler(e, current_time) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         this.selection = '';
         if (mid_y + (-4) * tile_size < e.clientY && e.clientY < mid_y + (-2) * tile_size) {

@@ -1,16 +1,16 @@
 class Finish extends Screen {
-    constructor(engine, game) {
-        super(engine);
+    constructor(prev = null, engine, game) {
+        super(prev, engine);
         this.game = game;
         this.result = '';
-        if (this.game.finish == 1) {
-            if (this.game.stats.mode == 'sprint') {
+        if (this.game.finished === 1) {
+            if (this.game.stats.mode === 'sprint') {
                 this.result = ((this.game.stats.time) / 1000).toFixed(3);
-            } else if (this.game.stats.mode == 'finesse') {
+            } else if (this.game.stats.mode === 'finesse') {
                 this.result = `${this.game.stats.pieces} pieces`
-            } else if (this.game.stats.mode == 'cheese') {
+            } else if (this.game.stats.mode === 'cheese') {
                 this.result = ((this.game.stats.time) / 1000).toFixed(3);
-            } else if (this.game.stats.mode == '4-wide') {
+            } else if (this.game.stats.mode === '4-wide') {
                 this.result = `${this.game.stats.lines} lines`;
             } else {
                 this.result = `${this.game.stats.score} pts`;
@@ -25,7 +25,7 @@ class Finish extends Screen {
     }
 
     render(current_time) {
-        const {w, h, tile_size, mid_x, mid_y} = this.engine;
+        const {w, h, mid_x, mid_y, tile_size} = this.engine;
 
         // CLEAR SCREEN
         this.engine.ctx.clearRect(0, 0, w, h);
@@ -42,20 +42,20 @@ class Finish extends Screen {
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.exit_state(2);
+                this.pop_state(current_time, 2);
                 socket.emit('room', { type: 'leave' });
                 break;
             case this.game.bindings['reset']:
                 if (typeof io !== 'undefined' && socket.connected) {
                     socket.emit('action', { type: 'reset', time: current_time }, (response) => {
-                        this.game.on_reset(response.time, { seed: response.seed });
-                        this.exit_state();
-                        new Ready(this.engine, this.game).enter_state(response.time);
+                        this.game.action_handler('reset', response.time, { seed: response.seed });
+                        const play_screen = this.pop_state(response.time);
+                        new Ready(play_screen, this.engine, this.game).push_state(response.time);
                     });
                 } else {
-                    this.game.on_reset(current_time);
-                    this.exit_state();
-                    new Ready(this.engine, this.game).enter_state(current_time);
+                    this.game.action_handler('reset', current_time);
+                    const play_screen = this.pop_state(current_time);
+                    new Ready(play_screen, this.engine, this.game).push_state(current_time);
                 }
                 break;
         }

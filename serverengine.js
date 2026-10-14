@@ -53,28 +53,20 @@ class ServerEngine {
 
         this.active_rooms.set(room_id, room);
 
-        const game_loop = () => {
-            room.loop = setImmediate(game_loop);
-            const active_game = room.state_stack[room.state_stack.length - 1];
-            const server_time = performance.now();
+        // const game_loop = () => {
+        //     room.loop = setImmediate(game_loop);
+        //     const active_game = room.state_stack[room.state_stack.length - 1];
+        //     const server_time = performance.now();
 
-            if (server_time >= room.last_update_time + 10000) { // TODO: fix the desync when away from the tab
-                room.last_update_time = server_time;
-                if (active_game?.should_update()) {
-                    if (typeof active_game.frame_update === 'function') active_game.frame_update(room.last_update_time);
-                    this.io.to(room.id).emit('game_state', active_game.get_macro_state());
-                }
-            } else {
-                while (server_time >= room.last_update_time + this.frame_interval) {
-                    room.last_update_time += this.frame_interval;
-                    if (active_game?.should_update()) {
-                        if (typeof active_game.frame_update === 'function') active_game.frame_update(room.last_update_time);
-                        this.io.to(room.id).emit('game_state', active_game.get_macro_state()); // TODO: change to get_micro_state()
-                    }
-                }
-            }
-        };
-        game_loop();
+        //     while (server_time >= room.last_update_time + this.frame_interval) {
+        //         room.last_update_time += this.frame_interval;
+        //         if (active_game) {
+        //             if (typeof active_game.frame_update === 'function') active_game.frame_update(room.last_update_time);
+        //             this.io.to(room.id).emit('game_state', active_game.get_macro_state()); // TODO: change to get_micro_state()
+        //         }
+        //     }
+        // };
+        // game_loop();
 
         return room;
     }
@@ -151,11 +143,10 @@ class ServerEngine {
                 const room_id = this.active_sockets.get(socket.id);
                 const room = this.active_rooms.get(room_id);
                 const active_game = room?.state_stack[room.state_stack.length - 1];
-                const server_time = performance.now();
-                const handler = `on_${type}`;
-                if (active_game && typeof active_game[handler] === 'function') {
-                    const result = active_game[handler](time, params, socket.id);
-                    // TODO: emit get_macro_state() if necessary
+
+                if (active_game) {
+                    const result = active_game.action_handler(type, time, params);
+                    this.io.to(room.id).emit('game_state', active_game.get_macro_state());
                     if (typeof callback === 'function') {
                         callback({ time, ...result });
                     }

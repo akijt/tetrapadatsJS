@@ -13,7 +13,7 @@ if (typeof io !== 'undefined') {
 
 const engine = new Engine();
 const game = new Tetra();
-const menu = new Menu(engine, game);
+const menu = new Menu(null, engine, game);
 
 socket.on('game_state', (data) => {
     if (!game.server_game) game.server_game = {};

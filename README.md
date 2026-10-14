@@ -1,6 +1,6 @@
 # Tetrapadats
 
-A lightweight, custom-built HTML5 Canvas game engine powering a guideline-compliant block-stacking game. Built from scratch with a stack-based state machine, direct input routing, and frame-accurate timing.
+A lightweight, custom-built HTML5 Canvas game engine powering a guideline-compliant block-stacking game. Built from scratch with a stack-based state machine, direct input routing, and millisecond-accurate timing.
 
 ---
 
@@ -8,10 +8,10 @@ A lightweight, custom-built HTML5 Canvas game engine powering a guideline-compli
 
 At the core of the project is a custom, zero-dependency 2D Canvas engine (`Engine`) that handles game states, input, and screen scaling:
 
-- **Stack-Based State Machine:** Screen states (`Menu`, `Play`, `Ready`, `Pause`, `Finish`,`Settings`) are pushed and popped on a central stack, allowing easy overlays and state transitions.
-- **Unified Central Screen Metrics:** The engine calculates viewport numbers (`w`, `h`, `tile_size`, `mid_x`, `mid_y`) centrally. On window resize, grid tiles snap to integer values, so board cells render sharp and seamless *(note: integer snapping applies to grid tiles and layout math, not vector text.)*
+- **Stack-Based State Machine:** Screen states (`Menu`, `Play`, `Ready`, `Pause`, `Finish`, `Settings`) are pushed and popped on a central stack, allowing easy overlays and state transitions.
+- **Unified Central Screen Metrics:** The engine calculates viewport numbers (`w`, `h`, `mid_x`, `mid_y`, `tile_size`) centrally. On window resize, grid tiles snap to integer values, so board cells render sharp and seamless *(note: Integer snapping applies to grid tiles and layout math, not vector text. Additionally, integer snapping only applies to displays with 1.00 DPR.)*
 - **Direct Input Handling:** Tracks key states, mouse motion, and clicks, passing raw timestamps to active screen state handlers.
-- **Fixed Update Game Loop:** Uses a tick system with fallback handling to decouple logic updates from dynamic frame rendering (`requestAnimationFrame`).
+- **DES rAF Game Loop:** Uses Discrete Event Simulation, reacting to action inputs and dynamic frame rendering (`requestAnimationFrame`).
 
 ---
 
@@ -26,7 +26,7 @@ Built on top of the engine is a full block-stacking core with standard guideline
 - **Classic:** Old-school ruleset with no kicks, hold pieces, or queue previews.
 - **Cheese:** Downstacking practice against randomized garbage.
 - **Finesse:** Finesse practice for keypress optimization.
-- **4-Wide:** Center-well 4-wide comboing practice.
+- **4-Wide:** Center-well 4-wide combo practice.
 
 ### Guideline Features
 - **Super Rotation System (SRS):** Full standard rotation and kicks for all pieces.
@@ -85,8 +85,8 @@ No build tools or package managers required.
 ├── tetra.js          # Tetrapadats core holding game state and update logic
 ├── main.js           # Engine setup and startup code
 ├── menu.js           # Mode selection
-├── ready.js          # Countdown overlay
 ├── play.js           # Gameplay
+├── ready.js          # Countdown overlay
 ├── pause.js          # Pause overlay
 ├── finish.js         # End-game summary
 └── settings.js       # Controls and handling customization
@@ -97,9 +97,13 @@ No build tools or package managers required.
 ## Roadmap & To-Do
 
 - [x] **In-Game Customization UI:** Add menu screen for keybinding remapping and live adjustment of handling settings (DAS, ARR, SDF).
-- [ ] **Engine Text Input System:** Finish the built-in `text_buffer` listener to support text input fields for player profiles and high score entries.
+- [x] **Discrete Event Simulation:** Implement DES architecture to ensure the game acts deterministically, enabling game replays.
+- [x] **Engine Text Input System:** Finish the built-in `text_buffer` listener to support text input fields for player profiles and high score entries.
 - [ ] **Cheese Mode Win Condition:** Implement a target cleared-garbage counter so Cheese mode functions as a winnable time attack.
 - [ ] **Finesse Mode Win Condition:** Implement a timer so Finesse mode functions as a sprint competing for most pieces.
-- [ ] **Classic Mode Gravity:** Validate Classic mode gravity to better reflect traditional speeds.
-- [ ] **Fix Pixel Snapping:** Scale canvas resolution by DPR and adjust stroke offsets to eliminate anti-aliasing blur on all displays
-- [ ] **Inputs on Mobile**
+- [x] **Classic Mode Gravity:** Validate Classic mode gravity to better reflect traditional speeds.
+- [x] **Pixel Snapping:** Scale canvas resolution by DPR and adjust stroke offsets to eliminate anti-aliasing blur on all displays. *Validated for 1.00 DPR, but abandoned other ratios.*
+- [ ] **Inputs on Mobile:** Make gameplay possible when accessed from a touchscreen device.
+- [ ] **Server Autoritative Model:** Host and communicate with a server that validates gameplay.
+- [ ] **Database:** Enable record keeping with a database, storing game config and scores.
+- [x] **Screen Class Update:** Overhaul Screen class to work as a singly linked list with each managing it's own static layers.
