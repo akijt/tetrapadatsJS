@@ -66,6 +66,8 @@ class Engine {
     constructor(aspect_w = 4, aspect_h = 3, grid_scale = 10) {
         this.canvas = document.getElementById('myCanvas');
         this.ctx = this.canvas.getContext('2d');
+        this.canvas.tabIndex = -1;
+        this.canvas.style.outline = 'none';
 
         this.aspect_w = aspect_w;
         this.aspect_h = aspect_h;
@@ -73,7 +75,6 @@ class Engine {
         this.grid_w = this.aspect_w * this.grid_scale;
         this.grid_h = this.aspect_h * this.grid_scale;
 
-        this.dpr = 1;
         this.w = 0;
         this.h = 0;
         this.mid_x = 0;
@@ -107,21 +108,24 @@ class Engine {
         this.active_screen = null;
     }
 
-    run(screen) { // TODO: possibly change document to this.canvas for different mouse location data
+    run(screen) {
         const current_time = Math.floor(performance.now());
-        screen.push_state(current_time);
 
+        window.addEventListener('focus', this.focusHandler.bind(this));
+        window.addEventListener('blur', this.blurHandler.bind(this));
         window.addEventListener('resize', this.resizeHandler.bind(this));
-        document.addEventListener('keydown', this.keyDownHandler.bind(this));
-        document.addEventListener('keyup', this.keyUpHandler.bind(this));
-        document.addEventListener('mousedown', this.mouseDownHandler.bind(this));
-        document.addEventListener('mouseup', this.mouseUpHandler.bind(this));
-        document.addEventListener('click', this.clickHandler.bind(this));
-        document.addEventListener('auxclick', this.auxClickHandler.bind(this));
-        document.addEventListener('contextmenu', this.contextMenuHandler.bind(this));
-        document.addEventListener('mousemove', this.moveHandler.bind(this));
+        this.canvas.addEventListener('keydown', this.keyDownHandler.bind(this));
+        this.canvas.addEventListener('keyup', this.keyUpHandler.bind(this));
+        this.canvas.addEventListener('mousedown', this.mouseDownHandler.bind(this));
+        this.canvas.addEventListener('mouseup', this.mouseUpHandler.bind(this));
+        this.canvas.addEventListener('click', this.clickHandler.bind(this));
+        this.canvas.addEventListener('auxclick', this.auxClickHandler.bind(this));
+        this.canvas.addEventListener('contextmenu', this.contextMenuHandler.bind(this));
+        this.canvas.addEventListener('mousemove', this.moveHandler.bind(this));
+        this.canvas.focus();
 
         this.resizeHandler();
+        screen.push_state(current_time);
         requestAnimationFrame(this.game_loop.bind(this));
     }
 
@@ -145,26 +149,45 @@ class Engine {
         return text;
     }
 
+    focusHandler(e) {
+        this.canvas.focus();
+    }
+
+    blurHandler(e) {
+        const current_time = Math.floor(performance.now());
+        Object.keys(this.input_state).forEach(code => {
+            if (this.input_state[code] > 0) {
+                this.input_state[code] = 0;
+                this.active_screen?.keyUpHandler({ code: code }, current_time);
+            }
+        });
+    }
+
     resizeHandler(e) {
-        this.dpr = window.devicePixelRatio || 1;
-        this.w = window.innerWidth;
-        this.h = window.innerHeight;
+        // CSS Pixels: set CSS area to the container provided
+        const parent = this.canvas.parentElement;
+        const css_w = (parent && parent.clientWidth) ? parent.clientWidth : window.innerWidth;
+        const css_h = (parent && parent.clientHeight) ? parent.clientHeight : window.innerHeight;
+
+        this.canvas.style.width = `${css_w}px`;
+        this.canvas.style.height = `${css_h}px`;
+
+        // Canvas Pixels: set canvas to the same size as the CSS area
+        this.w = css_w;
+        this.h = css_h;
         this.mid_x = Math.floor(this.w / 2);
         this.mid_y = Math.floor(this.h / 2);
         this.tile_size = Math.floor(Math.min(this.w / this.grid_w, this.h / this.grid_h));
 
-        // Logical screen pixels
-        this.canvas.style.width = `${window.innerWidth}px`;
-        this.canvas.style.height = `${window.innerHeight}px`;
+        this.canvas.width = this.w;
+        this.canvas.height = this.h;
 
-        // Physical screen pixels
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        // this.canvas.width = Math.floor(window.innerWidth * this.dpr);
-        // this.canvas.height = Math.floor(window.innerHeight * this.dpr);
-
+        // // Physical Pixels: set canvas to align with display pixles
+        // const dpr = window.devicePixelRatio || 1;
+        // this.canvas.width = Math.floor(this.w * dpr);
+        // this.canvas.height = Math.floor(this.h * dpr);
         // this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        // this.ctx.scale(this.dpr, this.dpr);
+        // this.ctx.scale(dpr, dpr);
 
         const current_time = Math.floor(performance.now());
         this.active_screen?.resizeHandler?.(e, current_time);
@@ -183,6 +206,7 @@ class Engine {
                 this.text_buffer += e.key;
             }
         } else if (!e.repeat) {
+            e.preventDefault();
             const code = e.code;
             if (this.input_state[code] === 0) {
                 const current_time = Math.floor(performance.now());
@@ -201,12 +225,25 @@ class Engine {
         }
     }
 
+    get_canvas_coords(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+        if (rect.width !== 0 && rect.height !== 0) {
+            x *= this.canvas.width / rect.width;
+            y *= this.canvas.height / rect.height;
+        }
+        return { x: Math.floor(x), y: Math.floor(y) };
+    }
+
     mouseDownHandler(e) {
+        this.canvas.focus();
         const code = 'Mouse' + e.button;
         if (this.input_state[code] === 0) {
             const current_time = Math.floor(performance.now());
             this.input_state[code] = current_time;
-            this.active_screen?.mouseDownHandler(e, current_time);
+            const { x, y } = this.get_canvas_coords(e);
+            this.active_screen?.mouseDownHandler({ ...e, clientX: x, clientY: y }, current_time);
         }
     }
 
@@ -215,29 +252,34 @@ class Engine {
         if (this.input_state[code] > 0) {
             const current_time = Math.floor(performance.now());
             this.input_state[code] = 0;
-            this.active_screen?.mouseUpHandler(e, current_time);
+            const { x, y } = this.get_canvas_coords(e);
+            this.active_screen?.mouseUpHandler({ ...e, clientX: x, clientY: y }, current_time);
         }
     }
 
     clickHandler(e) {
         const current_time = Math.floor(performance.now());
-        this.active_screen?.clickHandler(e, current_time);
+        const { x, y } = this.get_canvas_coords(e);
+        this.active_screen?.clickHandler({ ...e, clientX: x, clientY: y }, current_time);
     }
 
     auxClickHandler(e) {
         e.preventDefault();
         const current_time = Math.floor(performance.now());
-        this.active_screen?.auxClickHandler(e, current_time);
+        const { x, y } = this.get_canvas_coords(e);
+        this.active_screen?.auxClickHandler({ ...e, clientX: x, clientY: y }, current_time);
     }
 
     contextMenuHandler(e) {
         e.preventDefault();
         const current_time = Math.floor(performance.now());
-        this.active_screen?.contextMenuHandler(e, current_time);
+        const { x, y } = this.get_canvas_coords(e);
+        this.active_screen?.contextMenuHandler({ ...e, clientX: x, clientY: y }, current_time);
     }
 
     moveHandler(e) {
         const current_time = Math.floor(performance.now());
-        this.active_screen?.moveHandler(e, current_time);
+        const { x, y } = this.get_canvas_coords(e);
+        this.active_screen?.moveHandler({ ...e, clientX: x, clientY: y }, current_time);
     }
 }

@@ -113,11 +113,12 @@ class Settings extends Screen {
             this.engine.ctx.arc(gear_x, gear_y, .8 * tile_size, 0, 2 * Math.PI);
             this.engine.ctx.fill();
 
-            this.engine.ctx.fillStyle = 'rgb(0, 0, 0)';
+            this.engine.ctx.save();
+            this.engine.ctx.globalCompositeOperation = 'destination-out';
             this.engine.ctx.beginPath();
             this.engine.ctx.arc(gear_x, gear_y, .4 * tile_size, 0, 2 * Math.PI);
             this.engine.ctx.fill();
-            this.engine.ctx.fillStyle = 'rgb(255, 255, 255)';
+            this.engine.ctx.restore();
         }
     }
 
