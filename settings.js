@@ -3,6 +3,7 @@ class Settings extends Screen {
         super(prev, engine);
         this.game = game;
         this.selection = '';
+        this.mouse_selection = null;
 
         this.last_binding = null;
         this.flash_time = 0;
@@ -138,14 +139,6 @@ class Settings extends Screen {
         this.game.set_handling({[this.selection]: new_value});
     }
 
-    mouseDownHandler(e, current_time) {
-        const {w, h, mid_x, mid_y, tile_size} = this.engine;
-
-        if (['DAS', 'ARR', 'SDF'].includes(this.selection)) {
-            this.updateSlider(e);
-        }
-    }
-
     keyDownHandler(e, current_time) {
         if (this.last_binding) {
             for (const [action, code] of Object.entries(this.game.bindings)) {
@@ -168,18 +161,32 @@ class Settings extends Screen {
         }
     }
 
-    clickHandler(e, current_time) {
+    mouseDownHandler(e, current_time) {
+        if (e.button !== 0) return;
+        this.mouse_selection = this.selection;
+
+        if (['DAS', 'ARR', 'SDF'].includes(this.selection)) {
+            this.updateSlider(e);
+        }
+    }
+
+    mouseUpHandler(e, current_time) {
+        if (e.button !== 0) return;
+        const selection = this.mouse_selection;
+        this.mouse_selection = null;
+        if (selection !== this.selection) return;
+        
         if (this.last_binding) {
-            this.game.set_bindings({[this.selection]: this.last_binding});
+            this.game.set_bindings({[selection]: this.last_binding});
             this.last_binding = null;
-        } else if (this.selection === 'back') {
+        } else if (selection === 'back') {
             if (Object.values(this.game.bindings).includes('##########')) {
                 this.flash_time = current_time + 3000;
             } else {
                 document.body.style.cursor = 'default';
                 this.pop_state(current_time);
             }
-        } else if (this.selection === 'developer') {
+        } else if (selection === 'developer') {
             document.body.style.cursor = 'default';
             this.game.set_bindings({'quit'      : 'KeyQ',
                                     'reset'     : 'KeyR',
@@ -192,10 +199,10 @@ class Settings extends Screen {
                                     'soft_drop' : 'Comma',
                                     'hard_drop' : 'Space'});
             this.game.set_handling({'DAS': 100, 'ARR': 0, 'SDF': 0})
-        } else if (this.selection !== '' && !['DAS', 'ARR', 'SDF'].includes(this.selection)) {
+        } else if (selection !== '' && !['DAS', 'ARR', 'SDF'].includes(selection)) {
             document.body.style.cursor = 'default';
-            this.last_binding = this.game.bindings[this.selection];
-            this.game.set_bindings({[this.selection]: '...'});
+            this.last_binding = this.game.bindings[selection];
+            this.game.set_bindings({[selection]: '...'});
         }
     }
 

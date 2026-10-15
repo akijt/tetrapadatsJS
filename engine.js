@@ -51,15 +51,15 @@ class Screen {
     }
 
     textInputHandler(e, current_time) {}
+    focusHandler(e, current_time) {}
+    blurHandler(e, current_time) {}
     resizeHandler(e, current_time) {}
     keyDownHandler(e, current_time) {}
     keyUpHandler(e, current_time) {}
     mouseDownHandler(e, current_time) {}
     mouseUpHandler(e, current_time) {}
-    clickHandler(e, current_time) {}
-    auxClickHandler(e, current_time) {}
-    contextMenuHandler(e, current_time) {}
     moveHandler(e, current_time) {}
+    wheelHandler(e, current_time) {}
 }
 
 class Engine {
@@ -122,6 +122,7 @@ class Engine {
         this.canvas.addEventListener('auxclick', this.auxClickHandler.bind(this));
         this.canvas.addEventListener('contextmenu', this.contextMenuHandler.bind(this));
         this.canvas.addEventListener('mousemove', this.moveHandler.bind(this));
+        this.canvas.addEventListener('wheel', this.wheelHandler.bind(this), { passive: false });
         this.canvas.focus();
 
         this.resizeHandler();
@@ -136,9 +137,9 @@ class Engine {
         this.active_screen?.render(current_time);
     }
 
-    start_text_input(intial_text = '', max_length = 16) {
+    start_text_input(initial_text = '', max_length = 16) {
         this.text_input_active = true;
-        this.text_buffer = intial_text;
+        this.text_buffer = initial_text;
         this.text_max_length = max_length;
     }
 
@@ -150,7 +151,9 @@ class Engine {
     }
 
     focusHandler(e) {
+        const current_time = Math.floor(performance.now());
         this.canvas.focus();
+        this.active_screen?.focusHandler?.(e, current_time);
     }
 
     blurHandler(e) {
@@ -158,9 +161,15 @@ class Engine {
         Object.keys(this.input_state).forEach(code => {
             if (this.input_state[code] > 0) {
                 this.input_state[code] = 0;
-                this.active_screen?.keyUpHandler({ code: code }, current_time);
+                if (code.startsWith('Mouse')) {
+                    const button = parseInt(code.replace('Mouse', ''), 10);
+                    this.active_screen?.mouseUpHandler({ button: button, clientX: -1, clientY: -1 }, current_time);
+                } else {
+                    this.active_screen?.keyUpHandler({ code: code }, current_time);
+                }
             }
         });
+        this.active_screen?.blurHandler(e, current_time);
     }
 
     resizeHandler(e) {
@@ -194,7 +203,9 @@ class Engine {
     }
 
     keyDownHandler(e) {
-        if (this.text_input_active) {
+        if (e.code.startsWith('F')) {
+            return;
+        } else if (this.text_input_active) {
             const key = e.key;
             if (key === 'Enter' || key === 'Escape' || key === 'Tab') {
                 const current_time = Math.floor(performance.now());
@@ -243,7 +254,7 @@ class Engine {
             const current_time = Math.floor(performance.now());
             this.input_state[code] = current_time;
             const { x, y } = this.get_canvas_coords(e);
-            this.active_screen?.mouseDownHandler({ ...e, clientX: x, clientY: y }, current_time);
+            this.active_screen?.mouseDownHandler({ ...e, button: e.button, clientX: x, clientY: y }, current_time);
         }
     }
 
@@ -253,33 +264,31 @@ class Engine {
             const current_time = Math.floor(performance.now());
             this.input_state[code] = 0;
             const { x, y } = this.get_canvas_coords(e);
-            this.active_screen?.mouseUpHandler({ ...e, clientX: x, clientY: y }, current_time);
+            this.active_screen?.mouseUpHandler({ ...e, button: e.button, clientX: x, clientY: y }, current_time);
         }
     }
 
     clickHandler(e) {
-        const current_time = Math.floor(performance.now());
-        const { x, y } = this.get_canvas_coords(e);
-        this.active_screen?.clickHandler({ ...e, clientX: x, clientY: y }, current_time);
+        e.preventDefault();
     }
 
     auxClickHandler(e) {
         e.preventDefault();
-        const current_time = Math.floor(performance.now());
-        const { x, y } = this.get_canvas_coords(e);
-        this.active_screen?.auxClickHandler({ ...e, clientX: x, clientY: y }, current_time);
     }
 
     contextMenuHandler(e) {
         e.preventDefault();
-        const current_time = Math.floor(performance.now());
-        const { x, y } = this.get_canvas_coords(e);
-        this.active_screen?.contextMenuHandler({ ...e, clientX: x, clientY: y }, current_time);
     }
 
     moveHandler(e) {
         const current_time = Math.floor(performance.now());
         const { x, y } = this.get_canvas_coords(e);
-        this.active_screen?.moveHandler({ ...e, clientX: x, clientY: y }, current_time);
+        this.active_screen?.moveHandler({ ...e, clientX: x, clientY: y, movementX: e.movementX, movementY: e.movementY }, current_time);
+    }
+
+    wheelHandler(e) {
+        e.preventDefault();
+        const current_time = Math.floor(performance.now());
+        this.active_screen?.wheelHandler?.(e, current_time);
     }
 }

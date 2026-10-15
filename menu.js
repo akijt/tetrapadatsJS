@@ -3,11 +3,13 @@ class Menu extends Screen {
         super(prev, engine);
         this.game = game;
         this.selection = '';
+        this.mouse_selection = null;
     }
 
     enter_state(current_time) {
         super.enter_state(current_time);
         this.selection = '';
+        this.mouse_selection = null;
     }
 
     update(current_time) {}
@@ -76,13 +78,23 @@ class Menu extends Screen {
         }
     }
 
-    clickHandler(e, current_time) {
-        if (this.selection === 'settings') {
+    mouseDownHandler(e, current_time) {
+        if (e.button !== 0) return;
+        this.mouse_selection = this.selection;
+    }
+
+    mouseUpHandler(e, current_time) {
+        if (e.button !== 0) return;
+        const selection = this.mouse_selection;
+        this.mouse_selection = null;
+        if (selection !== this.selection) return;
+        
+        if (selection === 'settings') {
             document.body.style.cursor = 'default';
             new Settings(this, this.engine, this.game).push_state(current_time);
-        } else if (this.selection !== '') {
+        } else if (selection !== '') {
             document.body.style.cursor = 'default';
-            this.game.set_mode(this.selection);
+            this.game.set_mode(selection);
             this.game.set_level(1);
             this.game.action_handler('reset', current_time);
             const play_screen = new Play(this, this.engine, this.game).push_state(current_time);
