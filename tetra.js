@@ -181,8 +181,7 @@ class Tetra { // TODO: review 180 kicks
 
     action_handler(type, time, params) {
         if (this.finished) {
-            if (!this.paused && type === 'pause') return this.pause(time); // when finished, only take pause if not paused
-            if (this.paused && type === 'reset') return this.reset(time, params?.seed); // when finished, only take reset if paused
+            if (type === 'finish_reset') return this.reset(time, params?.seed); // when finished, only take finish_reset
             return;
         } else if (this.paused) {
             const PAUSED_ALLOWED = new Set(['reset', 'start', 'pause', 'move_left_press', 'move_left_release', 'move_right_press', 'move_right_release', 'soft_drop_press', 'soft_drop_release']);
@@ -206,7 +205,6 @@ class Tetra { // TODO: review 180 kicks
             case 'rotate_ccw':         return this.rotate(3, time);
             case 'hard_drop':          return this.hard_drop(time);
             case 'hold':               return this.hold(time);
-            default:                   console.warn(`Unknown action type: ${type}`);
         } 
     }
 
@@ -285,10 +283,6 @@ class Tetra { // TODO: review 180 kicks
     }
 
     pause(current_time) {
-        if (this.finished) {
-            this.paused = true;
-            return;
-        }
         if (this.paused) {
             this.stats.time = current_time - this.stats.time;
             if (this.lock_time !== null) this.lock_time += current_time;

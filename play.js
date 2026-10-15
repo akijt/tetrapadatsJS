@@ -8,7 +8,6 @@ class Play extends Screen {
 
     update(current_time) {
         if (this.game.frame_update(current_time)) {
-            this.game.action_handler('pause', current_time);
             new Finish(this, this.engine, this.game).push_state(current_time);
         }
     }
