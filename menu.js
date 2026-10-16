@@ -69,8 +69,7 @@ class Menu extends Screen {
         switch (e.code) {
             case this.game.bindings['reset']:
                 document.body.style.cursor = 'default';
-                this.game.set_mode('marathon');
-                this.game.set_level(1);
+                this.game.config_handler({ mode: 'marathon', level: 1 });
                 this.game.action_handler('reset', current_time);
                 const play_screen = new Play(this, this.engine, this.game).push_state(current_time);
                 new Ready(play_screen, this.engine, this.game).push_state(current_time);
@@ -94,8 +93,7 @@ class Menu extends Screen {
             new Settings(this, this.engine, this.game).push_state(current_time);
         } else if (selection !== '') {
             document.body.style.cursor = 'default';
-            this.game.set_mode(selection);
-            this.game.set_level(1);
+            this.game.config_handler({ mode: selection, level: 1 });
             this.game.action_handler('reset', current_time);
             const play_screen = new Play(this, this.engine, this.game).push_state(current_time);
             new Ready(play_screen, this.engine, this.game).push_state(current_time);

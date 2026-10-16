@@ -42,13 +42,35 @@ class Finish extends Screen {
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.game.action_handler('finish_reset', current_time);
                 this.pop_state(current_time, 2);
                 break;
             case this.game.bindings['reset']:
-                this.game.action_handler('finish_reset', current_time);
+                this.game.action_handler('reset', current_time);
                 const play_screen = this.pop_state(current_time);
                 new Ready(play_screen, this.engine, this.game).push_state(current_time);
+                break;
+            case this.game.bindings['move_left']:
+                this.game.action_handler('move_left_press', current_time);
+                break;
+            case this.game.bindings['move_right']:
+                this.game.action_handler('move_right_press', current_time);
+                break;
+            case this.game.bindings['soft_drop']:
+                this.game.action_handler('soft_drop_press', current_time);
+                break;
+        }
+    }
+
+    keyUpHandler(e, current_time) {
+        switch (e.code) {
+            case this.game.bindings['move_left']:
+                this.game.action_handler('move_left_release', current_time);
+                break;
+            case this.game.bindings['move_right']:
+                this.game.action_handler('move_right_release', current_time);
+                break;
+            case this.game.bindings['soft_drop']:
+                this.game.action_handler('soft_drop_release', current_time);
                 break;
         }
     }

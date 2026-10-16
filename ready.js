@@ -85,7 +85,7 @@ class Ready extends Screen {
         this.engine.ctx.fillStyle = 'rgb(0, 0, 0)';
         this.engine.ctx.textAlign = 'center';
         this.engine.ctx.font = `${tile_size * 2}px Arial`;
-        this.engine.ctx.fillText(Math.ceil(3 - (current_time - this.enter_time) / 1000), mid_x + (0) * tile_size, mid_y + (1) * tile_size);
+        this.engine.ctx.fillText(Math.ceil((this.countdown_duration - current_time + this.enter_time) / 1000), mid_x + (0) * tile_size, mid_y + (1) * tile_size);
     }
 
     keyDownHandler(e, current_time) {
@@ -94,7 +94,7 @@ class Ready extends Screen {
                 this.pop_state(current_time, 2);
                 break;
             case this.game.bindings['reset']:
-                this.game.action_handler('reset', current_time);
+                this.game.action_handler('reset_press', current_time);
                 this.enter_time = current_time;
                 break;
             case this.game.bindings['move_left']:

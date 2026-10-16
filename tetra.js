@@ -67,7 +67,7 @@ class Tetra { // TODO: review 180 kicks
                             [3, 4, 3, 2, 3, 4, 4, 3],
                             [2, 3, 2, 1, 2, 3, 3, 2, 2]]};
     static ORIENTATIONS = {'o': 1, 'i': 2, 's': 2, 'z': 2, 'j': 4, 'l': 4, 't': 4};
-    static STAT_NAMES = ['mode', 'seed', 'DAS', 'ARR', 'SDF', 'time', 'score',
+    static STAT_NAMES = ['mode', 'seed', 'DAS', 'ARR', 'SDF', 'time', 'score', 'attack',
                          'pieces', 'lines', 'level', 'keys', 'holds', 'finesse',
                          'single', 'double', 'triple', 'quad',
                          'mini t-spin null', 'mini t-spin single', 'mini t-spin double',
@@ -92,8 +92,8 @@ class Tetra { // TODO: review 180 kicks
             lock_type: 1,
             ghost: true,
             next: 3,
-            target: false,
             cheese: 0,
+            target: false,
             four_wide: false
         },
         'classic': {
@@ -106,23 +106,29 @@ class Tetra { // TODO: review 180 kicks
             ghost: false,
             next: 1
         },
+        'cheese': {
+            cheese: 5
+        },
         'finesse': {
             allow_hold: false,
             next: 0,
             target: true
         },
-        'cheese': {
-            cheese: 5
-        },
         '4-wide': {
             four_wide: true
         }
     }
-    static CLEAR_STRINGS     = {0: 'null', 1: 'single', 2: 'double', 3: 'triple', 4: 'quad'};
-    static PC_SCORES         = {1: 800, 2: 1200, 3: 1800, 4: 2000};
-    static TSPIN_SCORES      = {0: 400, 1: 800,  2: 1200, 3: 1600};
-    static MINI_TSPIN_SCORES = {0: 100, 1: 200,  2: 400};
-    static LINE_SCORES       = {1: 100, 2: 300,  3: 500,  4: 800};
+    static FINISHED_ALLOWED = new Set(['reset']);
+    static PAUSED_ALLOWED   = new Set(['start', 'reset', 'reset_press', 'quit_press', 'move_left_press', 'move_left_release', 'move_right_press', 'move_right_release', 'soft_drop_press', 'soft_drop_release']); 
+    static CLEAR_STRINGS     = { 0: 'null', 1: 'single', 2: 'double', 3: 'triple', 4: 'quad' };
+    static PC_SCORES         = { 1: 800, 2: 1200, 3: 1800, 4: 2000 };
+    static TSPIN_SCORES      = { 0: 400, 1: 800,  2: 1200, 3: 1600 };
+    static MINI_TSPIN_SCORES = { 0: 100, 1: 200,  2: 400 };
+    static LINE_SCORES       = { 1: 100, 2: 300,  3: 500,  4: 800 };
+    static PC_ATTACK         = 10;
+    static TSPIN_ATTACK      = { 0: 0, 1: 2, 2: 4, 3: 6 };
+    static MINI_TSPIN_ATTACK = { 0: 0, 1: 0, 2: 1 };
+    static LINE_ATTACK       = { 0: 0, 1: 0, 2: 1, 3: 2, 4: 4 };
 
     constructor() {
         this.colors = {'z': 'rgb(255,   0,   0)',
@@ -135,9 +141,8 @@ class Tetra { // TODO: review 180 kicks
                        'x': 'rgb(127, 127, 127)'};
         this.key_hold = [0, 0, 0]; // [move_left, soft_drop, move_right]
         this.lock_delay = {'time': 500, 'count': 15};
-        this.mode = '';
-        this.start_level = 0;
-        this.bindings = {'quit'      : 'Escape',
+        this.garbage_delay = 10000;
+        this.bindings = {'quit'     : 'Escape',
                          'reset'     : 'KeyR',
                          'hold'      : 'KeyV',
                          'move_left' : 'ArrowLeft',
@@ -148,16 +153,15 @@ class Tetra { // TODO: review 180 kicks
                          'soft_drop' : 'ArrowDown',
                          'hard_drop' : 'ArrowUp'};
         this.handling = {'DAS': 150, 'ARR': 30, 'SDF': 20};
+        this.mode = '';
+        this.start_level = 0;
 
         this.seed = undefined;
         this.paused = true;
         this.finished = 0;
-    }
 
-    set_mode(mode)         { this.mode = mode; }
-    set_level(level)       { this.start_level = level;}
-    set_bindings(bindings) { Object.assign(this.bindings, bindings); }
-    set_handling(handling) { Object.assign(this.handling, handling); }
+        this.on_event = null;
+    }
 
     get_macro_state() {
         return {
@@ -179,32 +183,38 @@ class Tetra { // TODO: review 180 kicks
         };
     }
 
+    config_handler(options = {}) {
+        if (options.mode !== undefined)     this.mode = options.mode;
+        if (options.level !== undefined)    this.start_level = options.level;
+        if (options.bindings !== undefined) Object.assign(this.bindings, options.bindings);
+        if (options.handling !== undefined) Object.assign(this.handling, options.handling);
+    }
+
     action_handler(type, time, params) {
         if (this.finished) {
-            if (type === 'finish_reset') return this.reset(time, params?.seed); // when finished, only take finish_reset
-            return;
+            if (!Tetra.FINISHED_ALLOWED.has(type)) return; // when finished, only allow certain actions
         } else if (this.paused) {
-            const PAUSED_ALLOWED = new Set(['reset', 'start', 'pause', 'move_left_press', 'move_left_release', 'move_right_press', 'move_right_release', 'soft_drop_press', 'soft_drop_release']);
-            if (!PAUSED_ALLOWED.has(type)) return; // when not finished but paused, only allow certain actions
+            if (!Tetra.PAUSED_ALLOWED.has(type)) return; // when not finished but paused, only allow certain actions
         } else {
             if (this.frame_update(time)) return; // when not finished and not paused, update the game state
         }
 
         switch (type) {
-            case 'reset':              return this.reset(time, params?.seed);
             case 'start':              return this.start(time);
-            case 'pause':              return this.pause(time);
+            case 'reset':              return this.reset(time, params?.seed);
+            case 'reset_press':        return this.reset(time, params?.seed);
+            case 'quit_press':         return this.pause(time);
             case 'move_left_press':    return this.move_press(-1, time);
             case 'move_left_release':  return this.move_release(-1, time);
             case 'move_right_press':   return this.move_press(1, time);
             case 'move_right_release': return this.move_release(1, time);
             case 'soft_drop_press':    return this.soft_drop_press(time);
             case 'soft_drop_release':  return this.soft_drop_release(time);
-            case 'rotate_cw':          return this.rotate(1, time);
-            case 'rotate_180':         return this.rotate(2, time);
-            case 'rotate_ccw':         return this.rotate(3, time);
-            case 'hard_drop':          return this.hard_drop(time);
-            case 'hold':               return this.hold(time);
+            case 'rotate_cw_press':    return this.rotate(1, time);
+            case 'rotate_180_press':   return this.rotate(2, time);
+            case 'rotate_ccw_press':   return this.rotate(3, time);
+            case 'hard_drop_press':    return this.hard_drop(time);
+            case 'hold_press':         return this.hold(time);
         } 
     }
 
@@ -218,7 +228,7 @@ class Tetra { // TODO: review 180 kicks
         }
         if (!this.customizations.kick) ['t', 'i'].forEach(x => [0, 1, 2, 3].forEach(y => [0, 1, 2, 3].forEach(z => this.kicks[x][y][z] = [[0, 0]])));
         if (!this.customizations.r180) ['t', 'i'].forEach(x => [0, 1, 2, 3].forEach(y => this.kicks[x][y][(y + 2) % 4] = []));
-        if (this.customizations.cheese > 0) this.add_cheese(null, this.customizations.cheese);
+        if (this.customizations.cheese > 0) this.add_garbage(null, this.customizations.cheese);
         if (this.customizations.four_wide) {
             for (let r = 0; r < 40; r++) this.board[r] = ['x', 'x', 'x', null, null, null, null, 'x', 'x', 'x'];
             this.board[0][3] = 'x';
@@ -239,6 +249,7 @@ class Tetra { // TODO: review 180 kicks
         this.combo = -1;
         this.last_clear = '';
         this.finesse_keys = 0;
+        this.garbage_queue = [];
 
         this.stats = Object.fromEntries(Tetra.STAT_NAMES.map(name => [name, 0]));
         Object.keys(this.handling).forEach(x => this.stats[x] = this.handling[x]);
@@ -280,6 +291,7 @@ class Tetra { // TODO: review 180 kicks
         this.finished = result;
         this.stats.time = current_time - this.stats.time;
         if (['marathon', 'classic', 'finesse', '4-wide'].includes(this.stats.mode)) this.finished = 1;
+        if (typeof this.on_event === 'function') this.on_event('finish', current_time);
     }
 
     pause(current_time) {
@@ -322,7 +334,7 @@ class Tetra { // TODO: review 180 kicks
         } else if (queue_type === 1) {
             return Array.from({ length: a.length }, () => a[Math.floor(this.mulberry32() * a.length)]);
         } else if (queue_type === 2) {
-            let arr = [];
+            const arr = [];
             for (let i = 0; i < a.length; i++) {
                 let current = a[Math.floor(this.mulberry32() * a.length)];
                 if (current === previous) current = a[Math.floor(this.mulberry32() * a.length)];
@@ -501,9 +513,11 @@ class Tetra { // TODO: review 180 kicks
         }
         this.new_piece(this.queue.shift(), current_time);
         this.hold_used = false;
+        if (typeof this.on_event === 'function') this.on_event('lock', current_time);
     }
 
     clear(current_time) {
+        // Process board
         const t_score = this.t_check();
         let rows = 0;
         let cheese_cleared = 0;
@@ -523,7 +537,8 @@ class Tetra { // TODO: review 180 kicks
             else
                 this.board[rows] = new Array(10).fill(null);
         }
-        this.add_cheese(current_time, cheese_cleared);
+
+        // Score and attack
         const clear_string = Tetra.CLEAR_STRINGS[clear_count];
         if (clear_count > 0) {
             if (clear_count === 4 || t_score >= 10) {
@@ -532,33 +547,52 @@ class Tetra { // TODO: review 180 kicks
             } else {
                 this.b2b = -1;
             }
-        }
-        if (is_pc) {
-            this.stats.score += Tetra.PC_SCORES[clear_count] * ((this.b2b > 0) ? 1.6 : 1) * this.stats.level;
-            this.last_clear = `perfect clear ${clear_string}`;
-        } else if (t_score > 10) {
-            this.stats.score += Tetra.TSPIN_SCORES[clear_count] * ((this.b2b > 0) ? 1.5 : 1) * this.stats.level;
-            this.last_clear = `t-spin ${clear_string}`;
-        } else if (t_score === 10) {
-            this.stats.score += Tetra.MINI_TSPIN_SCORES[clear_count] * ((this.b2b > 0) ? 1.5 : 1) * this.stats.level;
-            this.last_clear = `mini t-spin ${clear_string}`;
-        } else if (clear_count > 0) {
-            this.stats.score += Tetra.LINE_SCORES[clear_count] * ((this.b2b > 0) ? 1.5 : 1) * this.stats.level;
-            this.last_clear = clear_string;
-        }
-        if (clear_count > 0 || t_score >= 10) this.stats[this.last_clear]++;
-        if (clear_count > 0) {
             this.combo++;
             this.stats.score += 50 * this.combo * this.stats.level;
             if (this.combo > this.stats['max combo']) this.stats['max combo'] = this.combo;
-            this.stats.lines += clear_count;
-            if (this.stats.mode === 'sprint' && this.stats.lines >= 40) this.stop(current_time, 1);
-            else if (this.stats.lines >= this.stats.level * 10) {
-                this.stats.level++;
-                this.update_gravity();
-            }
         } else {
             this.combo = -1;
+        }
+        const b2b_multiplier = (this.b2b > 0 && clear_count > 0) ? 1.5 : 1
+        let attack_lines = Math.max(0, this.b2b) + Math.floor(this.combo / 3);
+        if (is_pc) {
+            this.stats.score += Tetra.PC_SCORES[clear_count] * b2b_multiplier * this.stats.level;
+            this.last_clear = `perfect clear ${clear_string}`;
+            attack_lines += Tetra.LINE_ATTACK[clear_count] + Tetra.PC_ATTACK;
+        } else if (t_score > 10) {
+            this.stats.score += Tetra.TSPIN_SCORES[clear_count] * b2b_multiplier * this.stats.level;
+            this.last_clear = `t-spin ${clear_string}`;
+            attack_lines +=  Tetra.TSPIN_ATTACK[clear_count];
+        } else if (t_score === 10) {
+            this.stats.score += Tetra.MINI_TSPIN_SCORES[clear_count] * b2b_multiplier * this.stats.level;
+            this.last_clear = `mini t-spin ${clear_string}`;
+            attack_lines +=  Tetra.MINI_TSPIN_ATTACK[clear_count];
+        } else if (clear_count > 0) {
+            this.stats.score += Tetra.LINE_SCORES[clear_count] * b2b_multiplier * this.stats.level;
+            this.last_clear = clear_string;
+            attack_lines +=  Tetra.LINE_ATTACK[clear_count];
+        }
+        if (clear_count > 0 || t_score >= 10) this.stats[this.last_clear]++;
+
+        // Manage game state
+        if (clear_count > 0) {
+            this.stats.lines += clear_count;
+            if (this.stats.lines >= this.stats.level * 10) {
+                this.stats.level++; // needs to stay after scoring.
+                this.update_gravity();
+            }
+            this.send_garbage(current_time, attack_lines);
+            this.stats.attack += attack_lines;
+            if (this.stats.mode === 'sprint' && this.stats.lines >= 40) this.stop(current_time, 1);
+            this.add_garbage(current_time, cheese_cleared, false);
+        } else {
+            if (this.garbage_queue.length > 0) {
+                const next_garbage = this.garbage_queue[0];
+                if (current_time >= next_garbage.receive_time + this.garbage_delay) {
+                    this.garbage_queue.shift();
+                    this.add_garbage(current_time, next_garbage.lines, true);
+                }
+            }
             if (this.customizations.four_wide) this.stop(current_time, -1);
         }
     }
@@ -609,26 +643,51 @@ class Tetra { // TODO: review 180 kicks
             }
         }
     }
+    
+    send_garbage(current_time, lines) {
+        lines = this.cancel_garbage(lines);
+        if (lines > 0 && typeof this.on_event === 'function') {
+            this.on_event('attack', current_time, { lines: lines });
+        }
+    }
 
-    add_cheese(current_time, n, aligned = false) {
-        if (n <= 0) return;
-        n = (n > 40) ? 40 : n;
-        for (let r = 40 - n; r < 40; r++) {
+    cancel_garbage(lines) {
+        while (lines > 0 && this.garbage_queue.length > 0) {
+            const next_garbage = this.garbage_queue[0];
+            if (lines >= next_garbage.lines) {
+                lines -= next_garbage.lines;
+                this.garbage_queue.shift();
+            } else {
+                next_garbage.lines -= lines;
+                return 0;
+            }
+        }
+        return lines;
+    }
+
+    receive_garbage(current_time, lines) {
+        this.garbage_queue.push({ lines: lines, receive_time: current_time});
+    }
+
+    add_garbage(current_time, lines, aligned = false) {
+        if (lines <= 0) return;
+        lines = (lines > 40) ? 40 : lines;
+        for (let r = 40 - lines; r < 40; r++) {
             if (this.board[r].some(x => x !== null)) {
                 this.stop(current_time, -1);
                 return;
             }
         }
-        const aligned_gap = Math.floor(this.mulberry32() * 10);
-        const new_cheese = [];
-        for (let i = 0; i < n; i++) {
+        const aligned_hole = Math.floor(this.mulberry32() * 10);
+        const new_garbage = [];
+        for (let i = 0; i < lines; i++) {
             const row = new Array(10).fill('x');
-            const gap = aligned ? aligned_gap : Math.floor(this.mulberry32() * 10);
-            row[gap] = null;
-            new_cheese.push(row);
+            const hole = aligned ? aligned_hole : Math.floor(this.mulberry32() * 10);
+            row[hole] = null;
+            new_garbage.push(row);
         }
-        this.board.splice(40 - n, n);
-        this.board.unshift(...new_cheese);
+        this.board.splice(40 - lines, lines);
+        this.board.unshift(...new_garbage);
     }
 
     collision() {
@@ -723,7 +782,7 @@ class Tetra { // TODO: review 180 kicks
         }
     }
 
-    frame_update(current_time) {
+    frame_update(current_time) { // TODO: optimize hot path
         let next_time = Math.min(this.gravity_time ?? Infinity, this.lock_time ?? Infinity, this.das_time ?? Infinity, this.finish_time ?? Infinity);
         while (!this.finished && next_time < current_time) {
             if (this.das_time === next_time) {

@@ -174,24 +174,24 @@ class Play extends Screen {
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.game.action_handler('pause', current_time);
+                this.game.action_handler('quit_press', current_time);
                 new Pause(this, this.engine, this.game).push_state(current_time);
                 break;
             case this.game.bindings['reset']:
-                this.game.action_handler('reset', current_time);
+                this.game.action_handler('reset_press', current_time);
                 new Ready(this, this.engine, this.game).push_state(current_time);
                 break;
             case this.game.bindings['hold']:
-                this.game.action_handler('hold', current_time);
+                this.game.action_handler('hold_press', current_time);
                 break;
             case this.game.bindings['rotate_cw']:
-                this.game.action_handler('rotate_cw', current_time);
+                this.game.action_handler('rotate_cw_press', current_time);
                 break;
             case this.game.bindings['rotate_180']:
-                this.game.action_handler('rotate_180', current_time);
+                this.game.action_handler('rotate_180_press', current_time);
                 break;
             case this.game.bindings['rotate_ccw']:
-                this.game.action_handler('rotate_ccw', current_time);
+                this.game.action_handler('rotate_ccw_press', current_time);
                 break;
             case this.game.bindings['move_left']:
                 this.game.action_handler('move_left_press', current_time);
@@ -203,7 +203,7 @@ class Play extends Screen {
                 this.game.action_handler('soft_drop_press', current_time);
                 break;
             case this.game.bindings['hard_drop']:
-                this.game.action_handler('hard_drop', current_time);
+                this.game.action_handler('hard_drop_press', current_time);
                 break;
         }
     }
