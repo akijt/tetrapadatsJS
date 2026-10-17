@@ -1,11 +1,12 @@
 class Tetra { // TODO: review 180 kicks
+    static PIECES = ['i', 'j', 'l', 'o', 's', 't', 'z']
     static MINOS = {'i': [[[0, 2], [1, 2], [2, 2], [3, 2]], [[2, 0], [2, 1], [2, 2], [2, 3]], [[0, 1], [1, 1], [2, 1], [3, 1]], [[1, 0], [1, 1], [1, 2], [1, 3]]],
-                    'j': [[[0, 2], [1, 2], [2, 2], [0, 3]], [[1, 1], [1, 2], [1, 3], [2, 3]], [[0, 2], [1, 2], [2, 2], [2, 1]], [[1, 1], [1, 2], [1, 3], [0, 1]]],
-                    'l': [[[0, 2], [1, 2], [2, 2], [2, 3]], [[1, 1], [1, 2], [1, 3], [2, 1]], [[0, 2], [1, 2], [2, 2], [0, 1]], [[1, 1], [1, 2], [1, 3], [0, 3]]],
+                    'j': [[[0, 2], [1, 2], [2, 2], [0, 3]], [[1, 1], [1, 2], [1, 3], [2, 3]], [[2, 1], [0, 2], [1, 2], [2, 2]], [[0, 1], [1, 1], [1, 2], [1, 3]]],
+                    'l': [[[0, 2], [1, 2], [2, 2], [2, 3]], [[1, 1], [1, 2], [1, 3], [2, 1]], [[0, 1], [0, 2], [1, 2], [2, 2]], [[1, 1], [0, 3], [1, 2], [1, 3]]],
                     'o': [[[1, 2], [1, 3], [2, 2], [2, 3]], [[1, 2], [1, 3], [2, 2], [2, 3]], [[1, 2], [1, 3], [2, 2], [2, 3]], [[1, 2], [1, 3], [2, 2], [2, 3]]],
-                    's': [[[1, 2], [1, 3], [0, 2], [2, 3]], [[1, 2], [2, 2], [1, 3], [2, 1]], [[1, 2], [1, 1], [2, 2], [0, 1]], [[1, 2], [0, 2], [1, 1], [0, 3]]],
-                    't': [[[1, 2], [0, 2], [1, 3], [2, 2]], [[1, 2], [1, 3], [2, 2], [1, 1]], [[1, 2], [2, 2], [1, 1], [0, 2]], [[1, 2], [1, 1], [0, 2], [1, 3]]],
-                    'z': [[[1, 2], [1, 3], [2, 2], [0, 3]], [[1, 2], [2, 2], [1, 1], [2, 3]], [[1, 2], [1, 1], [0, 2], [2, 1]], [[1, 2], [0, 2], [1, 3], [0, 1]]]};
+                    's': [[[1, 2], [0, 2], [1, 3], [2, 3]], [[2, 1], [1, 3], [1, 2], [2, 2]], [[1, 1], [0, 1], [1, 2], [2, 2]], [[1, 1], [0, 2], [1, 2], [0, 3]]],
+                    't': [[[1, 2], [0, 2], [1, 3], [2, 2]], [[1, 1], [1, 3], [1, 2], [2, 2]], [[1, 1], [0, 2], [1, 2], [2, 2]], [[1, 1], [0, 2], [1, 2], [1, 3]]],
+                    'z': [[[1, 2], [0, 3], [1, 3], [2, 2]], [[1, 1], [2, 3], [1, 2], [2, 2]], [[1, 1], [0, 2], [1, 2], [2, 1]], [[0, 1], [0, 2], [1, 2], [1, 3]]]};
     static DEFAULT_KICKS = {'t': [[[[ 0, 0]],
                                    [[ 0, 0], [-1, 0], [-1, 1], [ 0,-2], [-1,-2]],
                                    [[ 0, 0], [ 0, 1]],
@@ -75,7 +76,7 @@ class Tetra { // TODO: review 180 kicks
                          'perfect clear single', 'perfect clear double', 'perfect clear triple',
                          'perfect clear quad', 'max b2b', 'max combo'];
     static CUSTOMIZATIONS = {
-        // Queue Types (this.customization.queue_type):
+        // Queue Types (this.customizations.queue_type):
         // 0: 7-Bag (Shuffled bag)
         // 1: Random (Completely random)
         // 2: 1-Memory 1-Reroll (If consecutive pieces, it is rerolled once)
@@ -117,7 +118,7 @@ class Tetra { // TODO: review 180 kicks
         '4-wide': {
             four_wide: true
         }
-    }
+    };
     static FINISHED_ALLOWED = new Set(['reset']);
     static PAUSED_ALLOWED   = new Set(['start', 'reset', 'reset_press', 'quit_press', 'move_left_press', 'move_left_release', 'move_right_press', 'move_right_release', 'soft_drop_press', 'soft_drop_release']); 
     static CLEAR_STRINGS     = { 0: 'null', 1: 'single', 2: 'double', 3: 'triple', 4: 'quad' };
@@ -139,9 +140,6 @@ class Tetra { // TODO: review 180 kicks
                        'j': 'rgb(  0,   0, 255)',
                        't': 'rgb(160,  32, 240)', 
                        'x': 'rgb(127, 127, 127)'};
-        this.key_hold = [0, 0, 0]; // [move_left, soft_drop, move_right]
-        this.lock_delay = {'time': 500, 'count': 15};
-        this.garbage_delay = 10000;
         this.bindings = {'quit'     : 'Escape',
                          'reset'     : 'KeyR',
                          'hold'      : 'KeyV',
@@ -159,6 +157,38 @@ class Tetra { // TODO: review 180 kicks
         this.seed = undefined;
         this.paused = true;
         this.finished = 0;
+
+        this.board = null;
+        this.piece = null;
+        this.position = [0, 0];
+        this.rotation = 0;
+        this.held = null;
+        this.hold_used = false;
+        this.queue = [];
+        this.height = 0;
+        this.target = {};
+
+        this.key_hold = [0, 0, 0]; // [move_left, soft_drop, move_right]
+        this.lock_time = Infinity;
+        this.lock_delay = {'time': 500, 'count': 15};
+        this.lock_count = 0;
+        this.lock_lowest = 18;
+        this.gravity = 0;
+        this.gravity_time = Infinity;
+        this.das_time = Infinity;
+        this.finish_time = Infinity;
+        this.garbage_delay = 10000;
+
+        this.last_action = '';
+        this.b2b = -1;
+        this.combo = -1;
+        this.last_clear = '';
+        this.finesse_keys = 0;
+        this.garbage_queue = [];
+
+        this.stats = {};
+        this.customizations = {};
+        this.kicks = {};
 
         this.on_event = null;
     }
@@ -260,15 +290,17 @@ class Tetra { // TODO: review 180 kicks
         this.customizations = { ...Tetra.CUSTOMIZATIONS.default };
         this.kicks = structuredClone(Tetra.DEFAULT_KICKS);
         this.reset_mode();
-        this.queue = this.shuffle(Object.keys(Tetra.MINOS), this.customizations.queue_type);
-
+        this.queue = this.shuffle(Tetra.PIECES, this.customizations.queue_type);
         this.update_gravity();
-        this.finish_time = null;
-        this.gravity_time = null;
 
-        this.das_time = null;
+        this.lock_time = Infinity;
+        this.finish_time = Infinity;
+        this.gravity_time = Infinity;
+
+        this.das_time = Infinity;
         const key_hold_old = this.key_hold;
-        this.key_hold = [0, key_hold_old[1], 0];
+        this.key_hold[0] = 0;
+        this.key_hold[2] = 0;
         if (key_hold_old[0] === 1) this.move_press(-1, current_time);
         else if (key_hold_old[2] === 1) this.move_press(1, current_time);
         if (key_hold_old[0] === 2) this.move_press(-1, current_time);
@@ -282,7 +314,8 @@ class Tetra { // TODO: review 180 kicks
         this.stats.keys = 0;
         this.stats.time = current_time;
         if (this.mode === 'blitz') this.finish_time = current_time + 120000;
-        if (this.das_time) this.das_time = (this.das_time < current_time) ? current_time : this.das_time;
+        else this.finish_time = Infinity;
+        if (this.das_time < Infinity) this.das_time = (this.das_time < current_time) ? current_time : this.das_time;
 
         this.new_piece(this.queue.shift(), current_time);
     }
@@ -297,16 +330,17 @@ class Tetra { // TODO: review 180 kicks
     pause(current_time) {
         if (this.paused) {
             this.stats.time = current_time - this.stats.time;
-            if (this.lock_time !== null) this.lock_time += current_time;
-            if (this.finish_time !== null) this.finish_time += current_time;
+            if (this.lock_time < Infinity) this.lock_time += current_time;
+            if (this.finish_time < Infinity) this.finish_time += current_time;
             this.gravity_time += current_time;
             const new_gravity_time = current_time + this.gravity;
             this.gravity_time = (this.gravity_time < new_gravity_time) ? this.gravity_time : new_gravity_time;
 
             // Reassign das_time by calling appropriate move_press to properly increment keys
-            this.das_time = null;
+            this.das_time = Infinity;
             const key_hold_old = this.key_hold;
-            this.key_hold = [0, key_hold_old[1], 0];
+            this.key_hold[0] = 0;
+            this.key_hold[2] = 0;
             if (key_hold_old[0] === 1) this.move_press(-1, current_time);
             else if (key_hold_old[2] === 1) this.move_press(1, current_time);
             if (key_hold_old[0] === 2) this.move_press(-1, current_time);
@@ -317,28 +351,35 @@ class Tetra { // TODO: review 180 kicks
             this.paused = true;
 
             this.stats.time = current_time - this.stats.time;
-            if (this.lock_time !== null) this.lock_time -= current_time;
-            if (this.finish_time !== null) this.finish_time -= current_time;
+            if (this.lock_time < Infinity) this.lock_time -= current_time;
+            if (this.finish_time < Infinity) this.finish_time -= current_time;
             this.gravity_time -= current_time;
         }
     }
 
     shuffle(a, queue_type, previous = null) {
+        const len = a.length;
         if (queue_type === 0) {
             const arr = [...a];
-            for (let i = arr.length - 1; i > 0; i--) {
+            for (let i = len - 1; i > 0; i--) {
                 const j = Math.floor(this.mulberry32() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
+                const temp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = temp;
             }
             return arr;
         } else if (queue_type === 1) {
-            return Array.from({ length: a.length }, () => a[Math.floor(this.mulberry32() * a.length)]);
+            const arr = new Array(len);
+            for (let i = 0; i < len; i++) {
+                arr[i] = a[Math.floor(this.mulberry32() * len)];
+            }
+            return arr;
         } else if (queue_type === 2) {
-            const arr = [];
-            for (let i = 0; i < a.length; i++) {
-                let current = a[Math.floor(this.mulberry32() * a.length)];
-                if (current === previous) current = a[Math.floor(this.mulberry32() * a.length)];
-                arr.push(current);
+            const arr = new Array(len);
+            for (let i = 0; i < len; i++) {
+                let current = a[Math.floor(this.mulberry32() * len)];
+                if (current === previous) current = a[Math.floor(this.mulberry32() * len)];
+                arr[i] = current;
                 previous = current;
             }
             return arr;
@@ -354,10 +395,10 @@ class Tetra { // TODO: review 180 kicks
             this.stop(current_time, -1);
             return;
         }
-        if (this.queue.length < 8) this.queue.push(...this.shuffle(Object.keys(Tetra.MINOS), this.customizations.queue_type, this.queue[this.queue.length - 1]));
+        if (this.queue.length < 8) this.queue.push(...this.shuffle(Tetra.PIECES, this.customizations.queue_type, this.queue[this.queue.length - 1]));
 
         this.gravity_time = current_time + this.gravity;
-        this.lock_time = null;
+        this.lock_time = Infinity;
         this.lock_count = 0;
         this.lock_lowest = 18;
         this.update_height();
@@ -374,8 +415,9 @@ class Tetra { // TODO: review 180 kicks
         this.target.location = Math.floor(this.mulberry32() * Tetra.FINESSE[this.piece][this.target.rotation].length);
         const minos_piece_rotation = Tetra.MINOS[this.piece][this.target.rotation];
         this.target.position = [
-            this.target.location - Math.min(...minos_piece_rotation.map(x => x[0])),
-            -Math.min(...minos_piece_rotation.map(x => x[1]))];
+            this.target.location - (minos_piece_rotation[0][0] < minos_piece_rotation[1][0] ? minos_piece_rotation[0][0] : minos_piece_rotation[1][0]),
+            -minos_piece_rotation[0][1]
+        ]; // mino coordinates are organized in a way that min y can be found in the first coord while min x can be found in the first or second coord
     }
 
     hold(current_time) {
@@ -400,13 +442,15 @@ class Tetra { // TODO: review 180 kicks
         this.stats.keys++;
         const actions = (turns % 2 === 1) ? 1 : 2;
         this.finesse_keys += actions;
-        const orig_position = [...this.position];
+        const orig_x = this.position[0];
+        const orig_y = this.position[1];
         const orig_rotation = this.rotation;
         this.rotation = (this.rotation + turns) % 4;
         const kicks_piece_rotation = this.kicks[(this.piece === 'i') ? 'i' : 't'][orig_rotation][this.rotation];
         for (let i = 0; i < kicks_piece_rotation.length; i++) {
-            const [x, y] = kicks_piece_rotation[i];
-            this.position = [orig_position[0] + x, orig_position[1] + y];
+            const delta = kicks_piece_rotation[i];
+            this.position[0] = orig_x + delta[0];
+            this.position[1] = orig_y + delta[1];
             if (!this.collision()) {
                 this.update_height();
                 this.update_lock(current_time, actions);
@@ -414,7 +458,8 @@ class Tetra { // TODO: review 180 kicks
                 return;
             }
         }
-        this.position = orig_position;
+        this.position[0] = orig_x;
+        this.position[1] = orig_y;
         this.rotation = orig_rotation;
     }
 
@@ -448,7 +493,7 @@ class Tetra { // TODO: review 180 kicks
         const opposite = 1 - direction;
         this.key_hold[direction + 1] = 0;
         if (this.key_hold[opposite] === 0) {
-            this.das_time = null;
+            this.das_time = Infinity;
         } else if (this.key_hold[opposite] === 1) {
             this.das_time = current_time + this.stats.DAS; // DAS added back to prevent "DAS skip"
         } else {
@@ -500,7 +545,11 @@ class Tetra { // TODO: review 180 kicks
     }
 
     lock(current_time) {
-        if (Tetra.MINOS[this.piece][this.rotation].every(d => this.position[1] + d[1] >= 20)) {
+        const minos_piece_rotation = Tetra.MINOS[this.piece][this.rotation];
+        const pos_x = this.position[0];
+        const pos_y = this.position[1];
+    
+        if (pos_y + minos_piece_rotation[0][1] >= 20) {
             this.stop(current_time, -1);
             return;
         }
@@ -508,7 +557,18 @@ class Tetra { // TODO: review 180 kicks
         this.stats.pieces++;
         this.f_check(current_time);
         if (!this.customizations.target) {
-            Tetra.MINOS[this.piece][this.rotation].forEach(d => this.board[this.position[1] + d[1]][this.position[0] + d[0]] = this.piece);
+            const b = this.board;
+            const p = this.piece;
+            const m0 = minos_piece_rotation[0];
+            const m1 = minos_piece_rotation[1];
+            const m2 = minos_piece_rotation[2];
+            const m3 = minos_piece_rotation[3];
+
+            b[pos_y + m0[1]][pos_x + m0[0]] = p;
+            b[pos_y + m1[1]][pos_x + m1[0]] = p;
+            b[pos_y + m2[1]][pos_x + m2[0]] = p;
+            b[pos_y + m3[1]][pos_x + m3[0]] = p;
+
             this.clear(current_time);
         }
         this.new_piece(this.queue.shift(), current_time);
@@ -517,13 +577,14 @@ class Tetra { // TODO: review 180 kicks
     }
 
     clear(current_time) {
+        const board = this.board;
         // Process board
         const t_score = this.t_check();
         let rows = 0;
         let cheese_cleared = 0;
         for (let r = 0; r < 40; r++) {
-            if (this.board[r].some(x => x === null)) {
-                this.board[rows] = this.board[r];
+            if (board[r].includes(null)) {
+                board[rows] = board[r];
                 rows++;
             } else if (r < this.customizations.cheese) {
                 cheese_cleared++;
@@ -533,9 +594,9 @@ class Tetra { // TODO: review 180 kicks
         const is_pc = rows === 0;
         for (rows; rows < 40; rows++) {
             if (this.customizations.four_wide)
-                this.board[rows] = ['x', 'x', 'x', null, null, null, null, 'x', 'x', 'x'];
+                board[rows] = ['x', 'x', 'x', null, null, null, null, 'x', 'x', 'x'];
             else
-                this.board[rows] = new Array(10).fill(null);
+                board[rows] = new Array(10).fill(null);
         }
 
         // Score and attack
@@ -553,7 +614,7 @@ class Tetra { // TODO: review 180 kicks
         } else {
             this.combo = -1;
         }
-        const b2b_multiplier = (this.b2b > 0 && clear_count > 0) ? 1.5 : 1
+        const b2b_multiplier = (this.b2b > 0 && clear_count > 0) ? 1.5 : 1;
         let attack_lines = Math.max(0, this.b2b) + Math.floor(this.combo / 3);
         if (is_pc) {
             this.stats.score += Tetra.PC_SCORES[clear_count] * b2b_multiplier * this.stats.level;
@@ -598,14 +659,17 @@ class Tetra { // TODO: review 180 kicks
     }
 
     t_check() {
+        const board = this.board;
+        const pos_x = this.position[0];
+        const pos_y = this.position[1];
         let t_score = 0;
         if (this.piece === 't' && this.last_action[0] === 'r') {
             const corners = [[0, 3], [2, 3], [2, 1], [0, 1]];
             for (let i = 0; i < 4; i++) {
-                const [dc, dr] = corners[i];
-                const c = this.position[0] + dc;
-                const r = this.position[1] + dr;
-                if (r < 0 || c < 0 || c > 9 || this.board[r][c] !== null) {
+                const delta = corners[i];
+                const c = pos_x + delta[0];
+                const r = pos_y + delta[1];
+                if (r < 0 || c < 0 || c > 9 || board[r][c] !== null) {
                     if (i === this.rotation || i === (this.rotation + 1) % 4) {
                         t_score += 4;
                     } else {
@@ -619,7 +683,11 @@ class Tetra { // TODO: review 180 kicks
     }
 
     f_check(current_time) {
-        const col = this.position[0] + Math.min(...Tetra.MINOS[this.piece][this.rotation].map(d => d[0]));
+        const board = this.board;
+        const pos_x = this.position[0];
+        const pos_y = this.position[1];
+        const minos_piece_rotation = Tetra.MINOS[this.piece][this.rotation];
+        const col = pos_x + (minos_piece_rotation[0][0] < minos_piece_rotation[1][0] ? minos_piece_rotation[0][0] : minos_piece_rotation[1][0]);
         if (this.customizations.target) {
             if (this.rotation % Tetra.ORIENTATIONS[this.piece] !== this.target.rotation % Tetra.ORIENTATIONS[this.piece] || col !== this.target.location) {
                 this.stats.pieces--;
@@ -628,11 +696,11 @@ class Tetra { // TODO: review 180 kicks
             }
         }
         for (let i = 0; i < 4; i++) {
-            const [dc, dr] = Tetra.MINOS[this.piece][this.rotation][i];
-            const c = this.position[0] + dc;
-            const r = this.position[1] + dr;
+            const delta = minos_piece_rotation[i];
+            const c = pos_x + delta[0];
+            const r = pos_y + delta[1];
             for (let j = r + 1; j < 22; j++) {
-                if (this.board[j][c] !== null) return;
+                if (board[j][c] !== null) return;
             }
         }
         if (this.finesse_keys > Tetra.FINESSE[this.piece][this.rotation][col]) {
@@ -666,28 +734,33 @@ class Tetra { // TODO: review 180 kicks
     }
 
     receive_garbage(current_time, lines) {
-        this.garbage_queue.push({ lines: lines, receive_time: current_time});
+        this.garbage_queue.push({ lines: lines, receive_time: current_time });
     }
 
     add_garbage(current_time, lines, aligned = false) {
         if (lines <= 0) return;
+
+        const board = this.board;
         lines = (lines > 40) ? 40 : lines;
         for (let r = 40 - lines; r < 40; r++) {
-            if (this.board[r].some(x => x !== null)) {
-                this.stop(current_time, -1);
-                return;
+            const row = board[r];
+            for (let c = 0; c < 10; c++) {
+                if (row[c] !== null) {
+                    this.stop(current_time, -1);
+                    return;
+                }
             }
         }
+        for (let r = 39; r >= lines; r--) {
+            board[r] = board[r - lines];
+        }
         const aligned_hole = Math.floor(this.mulberry32() * 10);
-        const new_garbage = [];
-        for (let i = 0; i < lines; i++) {
+        for (let r = lines - 1; r >= 0; r--) {
             const row = new Array(10).fill('x');
             const hole = aligned ? aligned_hole : Math.floor(this.mulberry32() * 10);
             row[hole] = null;
-            new_garbage.push(row);
+            board[r] = row;
         }
-        this.board.splice(40 - lines, lines);
-        this.board.unshift(...new_garbage);
     }
 
     collision() {
@@ -735,9 +808,9 @@ class Tetra { // TODO: review 180 kicks
             this.lock_lowest = this.position[1];
             this.lock_count = 0;
         }
-        if (this.lock_time) {
+        if (this.lock_time < Infinity) {
             if (this.height > 0) { // stop condition
-                this.lock_time = null;
+                this.lock_time = Infinity;
             } else if (actions > 0 && this.customizations.lock_type > 0) { // reset condition
                 if (this.lock_count < this.lock_delay['count']) {
                     this.lock_time = current_time + this.lock_delay['time'];
@@ -750,10 +823,10 @@ class Tetra { // TODO: review 180 kicks
     }
 
     update_gravity() {
-        const level = this.stats.level
+        const level = this.stats.level;
         if (this.mode === 'classic') {
             const frames = Math.max(1, Math.floor(48 * Math.pow(1.118, 1 - level)));
-            this.gravity = frames / 60 * 1000
+            this.gravity = frames / 60 * 1000;
             if (this.key_hold[1] === 1) this.gravity = Math.min(this.gravity, this.stats.SDF);
         } else {
             this.gravity = Math.pow(0.8 - (level - 1) * 0.007, level - 1) * 1000;
@@ -782,22 +855,23 @@ class Tetra { // TODO: review 180 kicks
         }
     }
 
-    frame_update(current_time) { // TODO: optimize hot path
-        let next_time = Math.min(this.gravity_time ?? Infinity, this.lock_time ?? Infinity, this.das_time ?? Infinity, this.finish_time ?? Infinity);
-        while (!this.finished && next_time < current_time) {
-            if (this.das_time === next_time) {
-                this.das_tick(next_time);
-            }
-            if (this.gravity_time === next_time) {
-                this.gravity_tick(next_time);
-            }
-            if (this.lock_time === next_time) {
-                this.lock(next_time);
-            }
-            if (this.finish_time === next_time) {
-                this.stop(next_time, 1);
-            }
-            next_time = Math.min(this.gravity_time ?? Infinity, this.lock_time ?? Infinity, this.das_time ?? Infinity, this.finish_time ?? Infinity);
+    frame_update(current_time) {
+        while (!this.finished) {
+            const das = this.das_time;
+            const lock = this.lock_time;
+            const grav = this.gravity_time;
+            const fin = this.finish_time;
+
+            let next_time = das;
+            if (grav < next_time) next_time = grav;
+            if (lock < next_time) next_time = lock;
+            if (fin  < next_time) next_time = fin;
+
+            if (current_time <= next_time) break;
+            if (this.das_time     === next_time) this.das_tick(next_time);
+            if (this.lock_time    === next_time) this.lock(next_time);
+            if (this.gravity_time === next_time) this.gravity_tick(next_time);
+            if (this.finish_time  === next_time) this.stop(next_time, 1);
         }
         return this.finished;
     }
