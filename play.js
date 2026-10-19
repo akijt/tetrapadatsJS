@@ -6,10 +6,22 @@ class Play extends Screen {
         this.add_layer('background');
     }
 
+    enter_state(current_time) {
+        super.enter_state(current_time);
+        this.game.on_event = (event, current_time, params) => {
+            if (event === 'finish') {
+                new Finish(this, this.engine, this.game).push_state(current_time);
+            }
+        };
+    }
+
+    exit_state(current_time) {
+        super.exit_state(current_time);
+        this.game.on_event = null;
+    }
+
     update(current_time) {
-        if (this.game.frame_update(current_time)) {
-            new Finish(this, this.engine, this.game).push_state(current_time);
-        }
+        this.game.frame_update(current_time);
     }
 
     render(current_time) {
