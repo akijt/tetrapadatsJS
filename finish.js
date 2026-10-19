@@ -58,6 +58,29 @@ class Finish extends Screen {
                     new Ready(play_screen, this.engine, this.game).push_state(current_time);
                 }
                 break;
+            case this.game.bindings['move_left']:
+                this.game.action_handler('move_left_press', current_time);
+                break;
+            case this.game.bindings['move_right']:
+                this.game.action_handler('move_right_press', current_time);
+                break;
+            case this.game.bindings['soft_drop']:
+                this.game.action_handler('soft_drop_press', current_time);
+                break;
+        }
+    }
+
+    keyUpHandler(e, current_time) {
+        switch (e.code) {
+            case this.game.bindings['move_left']:
+                this.game.action_handler('move_left_release', current_time);
+                break;
+            case this.game.bindings['move_right']:
+                this.game.action_handler('move_right_release', current_time);
+                break;
+            case this.game.bindings['soft_drop']:
+                this.game.action_handler('soft_drop_release', current_time);
+                break;
         }
     }
 }

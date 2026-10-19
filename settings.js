@@ -3,12 +3,21 @@ class Settings extends Screen {
         super(prev, engine);
         this.game = game;
         this.selection = '';
+        this.mouse_selection = null;
 
         this.last_binding = null;
         this.flash_time = 0;
     }
 
-    update(current_time) { // TODO: cookies to save state (future update)
+    pop_state(current_time, count = 1) {
+        super.pop_state(current_time, count);
+        document.body.style.cursor = 'default';
+        // socket.emit('config', { type: 'bindings', value: this.game.bindings });
+        // socket.emit('config', { type: 'handling', value: this.game.handling });
+        save_config({ bindings: this.game.bindings, handling: this.game.handling });
+    }
+
+    update(current_time) {
     }
 
     render(current_time) {
@@ -135,24 +144,16 @@ class Settings extends Screen {
         let new_value = Math.round(minVal + norm * (maxVal - minVal));
         if (this.selection === 'SDF' && new_value === 41) new_value = 0;
 
-        this.game.set_handling({[this.selection]: new_value});
-    }
-
-    mouseDownHandler(e, current_time) {
-        const {w, h, mid_x, mid_y, tile_size} = this.engine;
-
-        if (['DAS', 'ARR', 'SDF'].includes(this.selection)) {
-            this.updateSlider(e);
-        }
+        this.game.config_handler({ handling: { [this.selection]: new_value } });
     }
 
     keyDownHandler(e, current_time) {
         if (this.last_binding) {
             for (const [action, code] of Object.entries(this.game.bindings)) {
                 if (code === e.code)
-                    this.game.set_bindings({[action]: '##########'});
+                    this.game.config_handler({ bindings: { [action]: '##########' } });
             }
-            this.game.set_bindings({[this.selection]: e.code});
+            this.game.config_handler({ bindings: { [this.selection]: e.code } });
             this.last_binding = null;
             return;
         }
@@ -161,45 +162,53 @@ class Settings extends Screen {
                 if (Object.values(this.game.bindings).includes('##########')) {
                     this.flash_time = current_time + 3000;
                 } else {
-                    document.body.style.cursor = 'default';
-                    // socket.emit('config', { type: 'bindings', value: this.game.bindings });
-                    // socket.emit('config', { type: 'handling', value: this.game.handling });
                     this.pop_state(current_time);
                 }
                 break;
         }
     }
 
-    clickHandler(e, current_time) {
+    mouseDownHandler(e, current_time) {
+        if (e.button !== 0) return;
+        this.mouse_selection = this.selection;
+
+        if (['DAS', 'ARR', 'SDF'].includes(this.selection)) {
+            this.updateSlider(e);
+        }
+    }
+
+    mouseUpHandler(e, current_time) {
+        if (e.button !== 0) return;
+        const selection = this.mouse_selection;
+        this.mouse_selection = null;
+        if (selection !== this.selection) return;
+
         if (this.last_binding) {
-            this.game.set_bindings({[this.selection]: this.last_binding});
+            this.game.config_handler({ bindings: { [selection]: this.last_binding } });
             this.last_binding = null;
-        } else if (this.selection === 'back') {
+        } else if (selection === 'back') {
             if (Object.values(this.game.bindings).includes('##########')) {
                 this.flash_time = current_time + 3000;
             } else {
-                document.body.style.cursor = 'default';
-                // socket.emit('config', { type: 'bindings', value: this.game.bindings });
-                // socket.emit('config', { type: 'handling', value: this.game.handling });
                 this.pop_state(current_time);
             }
-        } else if (this.selection === 'developer') {
+        } else if (selection === 'developer') {
+            const dev_bindings = {'quit'      : 'KeyQ',
+                                  'reset'     : 'KeyR',
+                                  'hold'      : 'KeyF',
+                                  'move_left' : 'KeyM',
+                                  'move_right': 'Period',
+                                  'rotate_cw' : 'KeyD',
+                                  'rotate_180': 'KeyA',
+                                  'rotate_ccw': 'KeyS',
+                                  'soft_drop' : 'Comma',
+                                  'hard_drop' : 'Space'};
+            const dev_handling = {'DAS': 100, 'ARR': 0, 'SDF': 0};
+            this.game.config_handler({ bindings: dev_bindings, handling : dev_handling });
+        } else if (selection && !['DAS', 'ARR', 'SDF'].includes(selection)) {
             document.body.style.cursor = 'default';
-            this.game.set_bindings({'quit'      : 'KeyQ',
-                                    'reset'     : 'KeyR',
-                                    'hold'      : 'KeyF',
-                                    'move_left' : 'KeyM',
-                                    'move_right': 'Period',
-                                    'rotate_cw' : 'KeyD',
-                                    'rotate_180': 'KeyA',
-                                    'rotate_ccw': 'KeyS',
-                                    'soft_drop' : 'Comma',
-                                    'hard_drop' : 'Space'});
-            this.game.set_handling({'DAS': 100, 'ARR': 0, 'SDF': 0})
-        } else if (this.selection !== '' && !['DAS', 'ARR', 'SDF'].includes(this.selection)) {
-            document.body.style.cursor = 'default';
-            this.last_binding = this.game.bindings[this.selection];
-            this.game.set_bindings({[this.selection]: '...'});
+            this.last_binding = this.game.bindings[selection];
+            this.game.config_handler({ bindings: { [selection]: '...' } });
         }
     }
 
@@ -218,7 +227,7 @@ class Settings extends Screen {
                         break;
                     }
                 }
-            } else if (mid_x + (1) * tile_size < e.clientX && e.clientX < mid_x + (11) * tile_size) {
+            } else if (mid_x + (0.5) * tile_size < e.clientX && e.clientX < mid_x + (11.5) * tile_size) {
                 if (mid_y + (-6) * tile_size < e.clientY && e.clientY < mid_y + (-4) * tile_size)
                     this.selection = 'DAS';
                 if (mid_y + (-1) * tile_size < e.clientY && e.clientY < mid_y + (1) * tile_size)
@@ -233,7 +242,7 @@ class Settings extends Screen {
                 if (mid_y + (-10.25) * tile_size < e.clientY && e.clientY < mid_y + (-8.25) * tile_size)
                     this.selection = 'developer';
             }
-            if (this.selection) {
+            if (this.selection && this.selection !== 'developer') {
                 document.body.style.cursor = 'pointer';
             } else {
                 document.body.style.cursor = 'default';

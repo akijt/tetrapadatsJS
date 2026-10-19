@@ -6,11 +6,22 @@ class Play extends Screen {
         this.add_layer('background');
     }
 
+    enter_state(current_time) {
+        super.enter_state(current_time);
+        this.game.on_event = (event, current_time, params) => {
+            if (event === 'finish') {
+                new Finish(this, this.engine, this.game).push_state(current_time);
+            }
+        };
+    }
+
+    exit_state(current_time) {
+        super.exit_state(current_time);
+        this.game.on_event = null;
+    }
+
     update(current_time) {
-        if (this.game.frame_update(current_time)) {
-            this.game.action_handler('pause', current_time);
-            new Finish(this, this.engine, this.game).push_state(current_time);
-        }
+        this.game.frame_update(current_time);
     }
 
     render(current_time) {
@@ -210,36 +221,36 @@ class Play extends Screen {
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.game.action_handler('pause', current_time);
-                socket.emit('action', { type: 'pause', time: current_time });
+                this.game.action_handler('quit_press', current_time);
+                socket.emit('action', { type: 'quit_press', time: current_time });
                 new Pause(this, this.engine, this.game).push_state(current_time);
                 break;
             case this.game.bindings['reset']:
                 if (typeof io !== 'undefined' && socket.connected) {
-                    socket.emit('action', { type: 'reset', time: current_time }, (response) => {
-                        this.game.action_handler('reset', response.time, { seed: response.seed });
+                    socket.emit('action', { type: 'reset_press', time: current_time }, (response) => {
+                        this.game.action_handler('reset_press', response.time, { seed: response.seed });
                         new Ready(this, this.engine, this.game).push_state(response.time);
                     });
                 } else {
-                    this.game.action_handler('reset', current_time);
+                    this.game.action_handler('reset_press', current_time);
                     new Ready(this, this.engine, this.game).push_state(current_time);
                 }
                 break;
             case this.game.bindings['hold']:
-                this.game.action_handler('hold', current_time);
-                socket.emit('action', { type: 'hold', time: current_time });
+                this.game.action_handler('hold_press', current_time);
+                socket.emit('action', { type: 'hold_press', time: current_time });
                 break;
             case this.game.bindings['rotate_cw']:
-                this.game.action_handler('rotate_cw', current_time);
-                socket.emit('action', { type: 'rotate_cw', time: current_time });
+                this.game.action_handler('rotate_cw_press', current_time);
+                socket.emit('action', { type: 'rotate_cw_press', time: current_time });
                 break;
             case this.game.bindings['rotate_180']:
-                this.game.action_handler('rotate_180', current_time);
-                socket.emit('action', { type: 'rotate_180', time: current_time });
+                this.game.action_handler('rotate_180_press', current_time);
+                socket.emit('action', { type: 'rotate_180_press', time: current_time });
                 break;
             case this.game.bindings['rotate_ccw']:
-                this.game.action_handler('rotate_ccw', current_time);
-                socket.emit('action', { type: 'rotate_ccw', time: current_time });
+                this.game.action_handler('rotate_ccw_press', current_time);
+                socket.emit('action', { type: 'rotate_ccw_press', time: current_time });
                 break;
             case this.game.bindings['move_left']:
                 this.game.action_handler('move_left_press', current_time);
@@ -254,8 +265,8 @@ class Play extends Screen {
                 socket.emit('action', { type: 'soft_drop_press', time: current_time });
                 break;
             case this.game.bindings['hard_drop']:
-                this.game.action_handler('hard_drop', current_time);
-                socket.emit('action', { type: 'hard_drop', time: current_time });
+                this.game.action_handler('hard_drop_press', current_time);
+                socket.emit('action', { type: 'hard_drop_press', time: current_time });
                 break;
         }
     }

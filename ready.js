@@ -86,7 +86,7 @@ class Ready extends Screen {
         this.engine.ctx.fillStyle = 'rgb(0, 0, 0)';
         this.engine.ctx.textAlign = 'center';
         this.engine.ctx.font = `${tile_size * 2}px Arial`;
-        this.engine.ctx.fillText(Math.ceil(3 - (current_time - this.enter_time) / 1000), mid_x + (0) * tile_size, mid_y + (1) * tile_size);
+        this.engine.ctx.fillText(Math.ceil((this.countdown_duration - current_time + this.enter_time) / 1000), mid_x + (0) * tile_size, mid_y + (1) * tile_size);
     }
 
     keyDownHandler(e, current_time) {
@@ -97,12 +97,12 @@ class Ready extends Screen {
                 break;
             case this.game.bindings['reset']:
                 if (typeof io !== 'undefined' && socket.connected) {
-                    socket.emit('action', { type: 'reset', time: current_time }, (response) => {
-                        this.game.action_handler('reset', response.time, { seed: response.seed });
+                    socket.emit('action', { type: 'reset_press', time: current_time }, (response) => {
+                        this.game.action_handler('reset_press', response.time, { seed: response.seed });
                         this.enter_time = response.time;
                     });
                 } else {
-                    this.game.action_handler('reset', current_time);
+                    this.game.action_handler('reset_press', current_time);
                     this.enter_time = current_time; 
                 }
                 break;

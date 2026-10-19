@@ -54,19 +54,19 @@ class Pause extends Screen {
     keyDownHandler(e, current_time) {
         switch (e.code) {
             case this.game.bindings['quit']:
-                this.game.action_handler('pause', current_time);
-                socket.emit('action', { type: 'pause', time: current_time });
+                this.game.action_handler('quit_press', current_time);
+                socket.emit('action', { type: 'quit_press', time: current_time });
                 this.pop_state(current_time);
                 break;
             case this.game.bindings['reset']:
                 if (typeof io !== 'undefined' && socket.connected) {
-                    socket.emit('action', { type: 'reset', time: current_time }, (response) => {
-                        this.game.action_handler('reset', response.time, { seed: response.seed });
+                    socket.emit('action', { type: 'reset_press', time: current_time }, (response) => {
+                        this.game.action_handler('reset_press', response.time, { seed: response.seed });
                         this.pop_state(response.time);
                         new Ready(this.prev, this.engine, this.game).push_state(response.time);
                     });
                 } else {
-                    this.game.action_handler('reset', current_time);
+                    this.game.action_handler('reset_press', current_time);
                     this.pop_state(current_time);
                     new Ready(this.prev, this.engine, this.game).push_state(current_time);
                 }
