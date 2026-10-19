@@ -1,4 +1,4 @@
-class Tetra { // TODO: review 180 kicks
+class Tetra {
     static PIECES = ['i', 'j', 'l', 'o', 's', 't', 'z']
     static MINOS = {'i': [[[0, 2], [1, 2], [2, 2], [3, 2]], [[2, 0], [2, 1], [2, 2], [2, 3]], [[0, 1], [1, 1], [2, 1], [3, 1]], [[1, 0], [1, 1], [1, 2], [1, 3]]],
                     'j': [[[0, 2], [1, 2], [2, 2], [0, 3]], [[1, 1], [1, 2], [1, 3], [2, 3]], [[2, 1], [0, 2], [1, 2], [2, 2]], [[0, 1], [1, 1], [1, 2], [1, 3]]],
@@ -299,8 +299,7 @@ class Tetra { // TODO: review 180 kicks
 
         this.das_time = Infinity;
         const key_hold_old = this.key_hold;
-        this.key_hold[0] = 0;
-        this.key_hold[2] = 0;
+        this.key_hold = [0, key_hold_old[1], 0];
         if (key_hold_old[0] === 1) this.move_press(-1, current_time);
         else if (key_hold_old[2] === 1) this.move_press(1, current_time);
         if (key_hold_old[0] === 2) this.move_press(-1, current_time);
@@ -332,15 +331,14 @@ class Tetra { // TODO: review 180 kicks
             this.stats.time = current_time - this.stats.time;
             if (this.lock_time < Infinity) this.lock_time += current_time;
             if (this.finish_time < Infinity) this.finish_time += current_time;
-            this.gravity_time += current_time;
+            if (this.gravity_time < Infinity) this.gravity_time += current_time;
             const new_gravity_time = current_time + this.gravity;
             this.gravity_time = (this.gravity_time < new_gravity_time) ? this.gravity_time : new_gravity_time;
 
             // Reassign das_time by calling appropriate move_press to properly increment keys
             this.das_time = Infinity;
             const key_hold_old = this.key_hold;
-            this.key_hold[0] = 0;
-            this.key_hold[2] = 0;
+            this.key_hold = [0, key_hold_old[1], 0];
             if (key_hold_old[0] === 1) this.move_press(-1, current_time);
             else if (key_hold_old[2] === 1) this.move_press(1, current_time);
             if (key_hold_old[0] === 2) this.move_press(-1, current_time);
@@ -353,7 +351,7 @@ class Tetra { // TODO: review 180 kicks
             this.stats.time = current_time - this.stats.time;
             if (this.lock_time < Infinity) this.lock_time -= current_time;
             if (this.finish_time < Infinity) this.finish_time -= current_time;
-            this.gravity_time -= current_time;
+            if (this.gravity_time < Infinity) this.gravity_time -= current_time;
         }
     }
 
@@ -403,6 +401,7 @@ class Tetra { // TODO: review 180 kicks
         this.lock_lowest = 18;
         this.update_height();
         this.update_lock(current_time);
+        if ((this.key_hold[0] || this.key_hold[2]) && this.das_time === Infinity) this.das_time = current_time; // 0 ARR wake up call
         this.last_action = '';
         this.finesse_keys = 0;
         if (this.stats.mode === 'classic') this.soft_drop_release(current_time);
@@ -415,7 +414,7 @@ class Tetra { // TODO: review 180 kicks
         this.target.location = Math.floor(this.mulberry32() * Tetra.FINESSE[this.piece][this.target.rotation].length);
         const minos_piece_rotation = Tetra.MINOS[this.piece][this.target.rotation];
         this.target.position = [
-            this.target.location - (minos_piece_rotation[0][0] < minos_piece_rotation[1][0] ? minos_piece_rotation[0][0] : minos_piece_rotation[1][0]),
+            this.target.location - ((minos_piece_rotation[0][0] < minos_piece_rotation[1][0]) ? minos_piece_rotation[0][0] : minos_piece_rotation[1][0]),
             -minos_piece_rotation[0][1]
         ]; // mino coordinates are organized in a way that min y can be found in the first coord while min x can be found in the first or second coord
     }
@@ -454,6 +453,8 @@ class Tetra { // TODO: review 180 kicks
             if (!this.collision()) {
                 this.update_height();
                 this.update_lock(current_time, actions);
+                if (this.gravity === 0) this.gravity_time = current_time; // Instant soft drop wake up call
+                if ((this.key_hold[0] || this.key_hold[2]) && this.das_time === Infinity) this.das_time = current_time; // 0 ARR wake up call
                 this.last_action = `rotate${i}`;
                 return;
             }
@@ -477,6 +478,7 @@ class Tetra { // TODO: review 180 kicks
         }
         this.update_height();
         this.update_lock(current_time, i);
+        if (this.gravity === 0) this.gravity_time = current_time; // Instant soft drop wake up call
         this.last_action = 'move';
     }
 
@@ -507,6 +509,7 @@ class Tetra { // TODO: review 180 kicks
         this.position[1] -= distance;
         this.update_height();
         this.update_lock(current_time);
+        if ((this.key_hold[0] || this.key_hold[2]) && this.das_time === Infinity) this.das_time = current_time; // 0 ARR wake up call
         this.stats.score += distance * this.key_hold[1];
         this.last_action = 'drop';
     }
@@ -516,9 +519,9 @@ class Tetra { // TODO: review 180 kicks
         this.finesse_keys++;
         this.key_hold[1] = 1;
         this.update_gravity();
-        this.gravity_time = current_time + this.gravity;
 
         if (!this.paused) {
+            this.gravity_time = current_time + this.gravity;
             if (this.height > 0) {
                 if (this.stats.SDF < 1) this.drop(40, current_time);
                 else this.drop(1, current_time);
@@ -529,7 +532,8 @@ class Tetra { // TODO: review 180 kicks
     soft_drop_release(current_time) {
         this.key_hold[1] = 0;
         this.update_gravity();
-        this.gravity_time = current_time + this.gravity;
+
+        if (!this.paused) this.gravity_time = current_time + this.gravity;
     }
 
     hard_drop(current_time) {
@@ -687,7 +691,7 @@ class Tetra { // TODO: review 180 kicks
         const pos_x = this.position[0];
         const pos_y = this.position[1];
         const minos_piece_rotation = Tetra.MINOS[this.piece][this.rotation];
-        const col = pos_x + (minos_piece_rotation[0][0] < minos_piece_rotation[1][0] ? minos_piece_rotation[0][0] : minos_piece_rotation[1][0]);
+        const col = pos_x + ((minos_piece_rotation[0][0] < minos_piece_rotation[1][0]) ? minos_piece_rotation[0][0] : minos_piece_rotation[1][0]);
         if (this.customizations.target) {
             if (this.rotation % Tetra.ORIENTATIONS[this.piece] !== this.target.rotation % Tetra.ORIENTATIONS[this.piece] || col !== this.target.location) {
                 this.stats.pieces--;
@@ -837,7 +841,7 @@ class Tetra { // TODO: review 180 kicks
     gravity_tick(current_time) {
         if (this.gravity === 0) {
             this.drop(40, current_time);
-            this.gravity_time += 1; // TODO: set to 0 and wake up with move and rotate
+            this.gravity_time = Infinity; // sleep gravity to not check every ms
         } else {
             this.drop(1, current_time);
             this.gravity_time += this.gravity;
@@ -848,7 +852,7 @@ class Tetra { // TODO: review 180 kicks
         const step = this.key_hold[2] - this.key_hold[0];
         if (this.stats.ARR === 0) {
             this.move(9 * step, current_time);
-            this.das_time += 1; // TODO: set to 0 and wake up with drop and rotate 
+            this.das_time = Infinity; // sleep das to not check every ms
         } else {
             this.move(step, current_time);
             this.das_time += this.stats.ARR;
