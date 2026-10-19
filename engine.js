@@ -203,9 +203,9 @@ class Engine {
     }
 
     keyDownHandler(e) {
-        if (e.code.startsWith('F')) {
-            return;
-        } else if (this.text_input_active) {
+        if (e.code.startsWith('F')) return;
+        e.preventDefault();
+        if (this.text_input_active) {
             const key = e.key;
             if (key === 'Enter' || key === 'Escape' || key === 'Tab') {
                 const current_time = Math.floor(performance.now());
@@ -217,7 +217,6 @@ class Engine {
                 this.text_buffer += e.key;
             }
         } else if (!e.repeat) {
-            e.preventDefault();
             const code = e.code;
             if (this.input_state[code] === 0) {
                 const current_time = Math.floor(performance.now());
