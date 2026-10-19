@@ -119,7 +119,7 @@ class Tetra {
             four_wide: true
         }
     };
-    static FINISHED_ALLOWED = new Set(['reset']);
+    static FINISHED_ALLOWED = new Set([         'reset',                              'move_left_press', 'move_left_release', 'move_right_press', 'move_right_release', 'soft_drop_press', 'soft_drop_release']);
     static PAUSED_ALLOWED   = new Set(['start', 'reset', 'reset_press', 'quit_press', 'move_left_press', 'move_left_release', 'move_right_press', 'move_right_release', 'soft_drop_press', 'soft_drop_release']); 
     static CLEAR_STRINGS     = { 0: 'null', 1: 'single', 2: 'double', 3: 'triple', 4: 'quad' };
     static PC_SCORES         = { 1: 800, 2: 1200, 3: 1800, 4: 2000 };
@@ -167,6 +167,7 @@ class Tetra {
         this.queue = [];
         this.height = 0;
         this.target = {};
+        this.garbage_queue = [];
 
         this.key_hold = [0, 0, 0]; // [move_left, soft_drop, move_right]
         this.lock_time = Infinity;
@@ -184,7 +185,6 @@ class Tetra {
         this.combo = -1;
         this.last_clear = '';
         this.finesse_keys = 0;
-        this.garbage_queue = [];
 
         this.stats = {};
         this.customizations = {};
@@ -274,12 +274,12 @@ class Tetra {
         this.board = [...new Array(40)].map(() => new Array(10).fill(null));
         this.held = null;
         this.hold_used = false;
+        this.garbage_queue = [];
 
         this.b2b = -1;
         this.combo = -1;
         this.last_clear = '';
         this.finesse_keys = 0;
-        this.garbage_queue = [];
 
         this.stats = Object.fromEntries(Tetra.STAT_NAMES.map(name => [name, 0]));
         Object.keys(this.handling).forEach(x => this.stats[x] = this.handling[x]);
@@ -305,7 +305,7 @@ class Tetra {
         if (key_hold_old[0] === 2) this.move_press(-1, current_time);
         else if (key_hold_old[2] === 2) this.move_press(1, current_time);
 
-        return { seed };
+        return { seed: this.stats.seed };
     }
 
     start(current_time) {
@@ -483,12 +483,16 @@ class Tetra {
     }
 
     move_press(direction, current_time) {
-        this.stats.keys++;
-        this.finesse_keys++;
         this.key_hold[direction + 1] = this.key_hold[1 - direction] + 1;
-        this.das_time = current_time + this.stats.DAS;
 
-        if (!this.paused) this.move(direction, current_time);
+        if (!this.finished) {
+            this.stats.keys++;
+            this.finesse_keys++;
+            this.das_time = current_time + this.stats.DAS;
+
+            if (!this.paused) this.move(direction, current_time);
+        }
+        
     }
 
     move_release(direction, current_time) {
@@ -504,7 +508,7 @@ class Tetra {
     }
 
     drop(distance, current_time) {
-        distance = Math.min(distance, this.height);
+        distance = (this.height < distance) ? this.height : distance;
         if (distance <= 0) return;
         this.position[1] -= distance;
         this.update_height();
@@ -515,16 +519,21 @@ class Tetra {
     }
 
     soft_drop_press(current_time) {
-        this.stats.keys++;
-        this.finesse_keys++;
         this.key_hold[1] = 1;
-        this.update_gravity();
+        
+        if (!this.finished) {
+            this.stats.keys++;
+            this.finesse_keys++;
+            this.update_gravity();
 
-        if (!this.paused) {
-            this.gravity_time = current_time + this.gravity;
-            if (this.height > 0) {
-                if (this.stats.SDF < 1) this.drop(40, current_time);
-                else this.drop(1, current_time);
+            if (!this.paused) {
+                if (this.stats.SDF < 1) {
+                    if (this.height > 0) this.drop(40, current_time);
+                    this.gravity_time = Infinity; // sleep gravity to not check every ms
+                } else {
+                    if (this.height > 0) this.drop(1, current_time);
+                    this.gravity_time = current_time + this.gravity;
+                }
             }
         }
     }
@@ -581,8 +590,8 @@ class Tetra {
     }
 
     clear(current_time) {
-        const board = this.board;
         // Process board
+        const board = this.board;
         const t_score = this.t_check();
         let rows = 0;
         let cheese_cleared = 0;
@@ -708,7 +717,7 @@ class Tetra {
             }
         }
         if (this.finesse_keys > Tetra.FINESSE[this.piece][this.rotation][col]) {
-            this.stats.finesse++;
+            this.stats.finesse++; // counts finesse errors
             if (this.customizations.target) {
                 this.stats.pieces--;
                 this.stop(current_time, -1);
@@ -831,7 +840,7 @@ class Tetra {
         if (this.mode === 'classic') {
             const frames = Math.max(1, Math.floor(48 * Math.pow(1.118, 1 - level)));
             this.gravity = frames / 60 * 1000;
-            if (this.key_hold[1] === 1) this.gravity = Math.min(this.gravity, this.stats.SDF);
+            if (this.key_hold[1] === 1) this.gravity = (this.stats.SDF < this.gravity) ? this.stats.SDF : this.gravity;
         } else {
             this.gravity = Math.pow(0.8 - (level - 1) * 0.007, level - 1) * 1000;
             if (this.key_hold[1] === 1) this.gravity = (this.stats.SDF < 1) ? 0 : this.gravity / this.stats.SDF;
@@ -840,10 +849,10 @@ class Tetra {
 
     gravity_tick(current_time) {
         if (this.gravity === 0) {
-            this.drop(40, current_time);
+            if (this.height > 0) this.drop(40, current_time);
             this.gravity_time = Infinity; // sleep gravity to not check every ms
         } else {
-            this.drop(1, current_time);
+            if (this.height > 0) this.drop(1, current_time);
             this.gravity_time += this.gravity;
         }
     }

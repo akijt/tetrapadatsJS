@@ -8,6 +8,7 @@ class Screen {
     }
 
     push_state(current_time) {
+        if (this.prev) this.prev.exit_state(current_time);
         this.push_time = current_time;
         this.engine.active_screen = this;
         this.enter_state(current_time);
@@ -16,6 +17,7 @@ class Screen {
 
     pop_state(current_time, count = 1) {
         let current = this;
+        current.exit_state(current_time);
         while (count > 0 && current.prev) {
             current = current.prev;
             count--;
@@ -29,6 +31,8 @@ class Screen {
         this.enter_time = current_time;
         this.resizeHandler(null, current_time);
     }
+
+    exit_state(current_time) {}
 
     add_layer(name) {
         const canvas = document.createElement('canvas');
