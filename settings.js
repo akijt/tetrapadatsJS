@@ -9,7 +9,13 @@ class Settings extends Screen {
         this.flash_time = 0;
     }
 
-    update(current_time) { // TODO: cookies to save state (future update)
+    pop_state(current_time, count = 1) {
+        super.pop_state(current_time, count);
+        document.body.style.cursor = 'default';
+        save_config({ bindings: this.game.bindings, handling: this.game.handling });
+    }
+
+    update(current_time) {
     }
 
     render(current_time) {
@@ -154,7 +160,6 @@ class Settings extends Screen {
                 if (Object.values(this.game.bindings).includes('##########')) {
                     this.flash_time = current_time + 3000;
                 } else {
-                    document.body.style.cursor = 'default';
                     this.pop_state(current_time);
                 }
                 break;
@@ -183,7 +188,6 @@ class Settings extends Screen {
             if (Object.values(this.game.bindings).includes('##########')) {
                 this.flash_time = current_time + 3000;
             } else {
-                document.body.style.cursor = 'default';
                 this.pop_state(current_time);
             }
         } else if (selection === 'developer') {
@@ -199,7 +203,7 @@ class Settings extends Screen {
                                   'hard_drop' : 'Space'};
             const dev_handling = {'DAS': 100, 'ARR': 0, 'SDF': 0};
             this.game.config_handler({ bindings: dev_bindings, handling : dev_handling });
-        } else if (selection !== '' && !['DAS', 'ARR', 'SDF'].includes(selection)) {
+        } else if (selection && !['DAS', 'ARR', 'SDF'].includes(selection)) {
             document.body.style.cursor = 'default';
             this.last_binding = this.game.bindings[selection];
             this.game.config_handler({ bindings: { [selection]: '...' } });
@@ -236,7 +240,7 @@ class Settings extends Screen {
                 if (mid_y + (-10.25) * tile_size < e.clientY && e.clientY < mid_y + (-8.25) * tile_size)
                     this.selection = 'developer';
             }
-            if (this.selection) {
+            if (this.selection && this.selection !== 'developer') {
                 document.body.style.cursor = 'pointer';
             } else {
                 document.body.style.cursor = 'default';
