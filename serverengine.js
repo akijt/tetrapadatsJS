@@ -43,15 +43,23 @@ class ServerEngine {
     create_room(room_id) {
         if (this.active_rooms.has(room_id)) return this.active_rooms.get(room_id);
 
+        const game_instance = new this.InitialStateClass();
+
         const room = {
             id: room_id,
             sockets: new Set(),
-            state_stack: [new this.InitialStateClass()],
+            state_stack: [game_instance],
             last_update_time: performance.now(),
             loop: null
         };
 
         this.active_rooms.set(room_id, room);
+
+        game_instance.on_event = (event, time, params) => {
+            if (typeof game_instance.get_macro_state === 'function') {
+                this.io.to(room_id).emit('game_state', game_instance.get_macro_state());
+            }
+        };
 
         // const game_loop = () => {
         //     room.loop = setImmediate(game_loop);
@@ -62,7 +70,7 @@ class ServerEngine {
         //         room.last_update_time += this.frame_interval;
         //         if (active_game) {
         //             if (typeof active_game.frame_update === 'function') active_game.frame_update(room.last_update_time);
-        //             this.io.to(room.id).emit('game_state', active_game.get_macro_state()); // TODO: change to get_micro_state()
+        //             if (typeof game_instance.get_micro_state === 'function') this.io.to(room.id).emit('game_state', active_game.get_micro_state());
         //         }
         //     }
         // };
@@ -128,10 +136,9 @@ class ServerEngine {
                 const room_id = this.active_sockets.get(socket.id);
                 const room = this.active_rooms.get(room_id);
                 const active_game = room?.state_stack[room.state_stack.length - 1];
-                const handler = `set_${type}`;
-                if (active_game && typeof active_game[handler] === 'function') {
-                    active_game[handler](value, socket.id);
-                    // TODO: emit get_macro_state() if necessary
+
+                if (active_game) {
+                    active_game.config_handler({ [type]: value });
                     if (typeof callback === 'function') {
                         callback({ success: true });
                     }
@@ -146,7 +153,9 @@ class ServerEngine {
 
                 if (active_game) {
                     const result = active_game.action_handler(type, time, params);
-                    this.io.to(room.id).emit('game_state', active_game.get_macro_state());
+                    if (typeof active_game.get_micro_state === 'function') {
+                        this.io.to(room.id).emit('game_state', active_game.get_micro_state());
+                    }
                     if (typeof callback === 'function') {
                         callback({ time, ...result });
                     }

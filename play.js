@@ -48,7 +48,7 @@ class Play extends Screen {
         }
 
         // PRINT SERVER BOARD
-        if (this.game.server_game) {
+        if (this.game.server_game && this.game.server_game.board) {
             const mini_tile = tile_size / 2;
             this.engine.ctx.beginPath();
             this.engine.ctx.strokeStyle = 'rgb(255, 255, 255)';
